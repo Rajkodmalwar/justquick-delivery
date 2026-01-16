@@ -92,8 +92,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       
       setAuthChecked(true)
       
-      // Store in localStorage for fallback
-      localStorage.setItem("jq_buyer", JSON.stringify(buyerData))
+      // Store in sessionStorage for fallback (better browser compatibility)
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem("jq_buyer", JSON.stringify(buyerData))
+      }
     } catch (error) {
       console.error("Error loading user data:", error)
       // Fallback to user metadata
@@ -135,7 +137,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (role === "admin") {
           console.log("⚠️ Admin detected - clearing cart context")
           setItems([]) // Clear cart for admin
-          localStorage.removeItem("jq_cart")
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem("jq_cart")
+            localStorage.removeItem("jq_cart") // Also clear legacy
+          }
         }
       } else {
         console.log("❌ No session found")
@@ -146,8 +151,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setAuthChecked(true)
       }
 
-      // Load cart from localStorage ONLY if not admin
-      const savedCart = localStorage.getItem("jq_cart")
+      // Load cart from sessionStorage ONLY if not admin (more compatible with browser restrictions)
+      const savedCart = typeof window !== 'undefined' ? sessionStorage.getItem("jq_cart") : null
       if (savedCart && !isAdmin) {
         try {
           const parsed = JSON.parse(savedCart)
@@ -190,7 +195,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setIsAdmin(false)
         setIsBuyer(false)
         setAuthChecked(true)
-        localStorage.removeItem("jq_buyer")
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem("jq_buyer")
+          localStorage.removeItem("jq_buyer") // Also clear legacy localStorage
+        }
       } else if (event === 'INITIAL_SESSION') {
         // Initial session loaded
         if (session?.user) {
@@ -219,10 +227,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [loadUserData])
 
-  // Save cart to localStorage ONLY if buyer
+  // Save cart to sessionStorage ONLY if buyer (better browser compatibility)
   useEffect(() => {
-    if (!isLoading && !isAdmin) {
-      localStorage.setItem("jq_cart", JSON.stringify(items))
+    if (!isLoading && !isAdmin && typeof window !== 'undefined') {
+      sessionStorage.setItem("jq_cart", JSON.stringify(items))
     }
   }, [items, isLoading, isAdmin])
 

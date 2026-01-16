@@ -20,11 +20,18 @@ export default function ProfilePage() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    // If still loading, wait for auth check to complete
+    if (isLoading) {
+      return
+    }
+    
+    // If not authenticated and loading is done, redirect to login
+    if (!isAuthenticated) {
       router.push("/auth/login?redirect=/profile")
       return
     }
 
+    // If authenticated, populate form with buyer data
     if (buyer) {
       setName(buyer.name || "")
       setPhone(buyer.phone || "")
