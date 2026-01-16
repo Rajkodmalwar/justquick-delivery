@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServer, getSupabaseAdmin } from "@/lib/supabase/server";
 
+export const dynamic = 'force-dynamic'
+
 // =============================
 // PUBLIC PRODUCT FETCH
 // =============================

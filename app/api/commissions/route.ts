@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { getSupabaseServer } from "@/lib/supabase/server"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const supabase = await getSupabaseServer()
   const { data, error } = await supabase.from("commissions").select("*").order("paid_status", { ascending: true })

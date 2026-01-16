@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSupabaseServer, getSupabaseAdmin } from "@/lib/supabase/server";
 import { generateLoginCode } from "@/lib/utils/generate-code";
 
+export const dynamic = 'force-dynamic'
+
 // =============================
 // PUBLIC SHOP FETCH
 // =============================

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 
+export const dynamic = 'force-dynamic'
+
 const ADMIN_ALLOWED = (process.env.NEXT_PUBLIC_ADMIN_ALLOWED || "")
   .split(",")
   .map((s) => s.trim())
