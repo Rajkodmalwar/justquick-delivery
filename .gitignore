@@ -74,9 +74,6 @@ temp/
 .yarn/cache
 .yarn/install-state.gz
 
-# pnpm
-pnpm-lock.yaml
-
 # Private files
 .private
 secrets/
