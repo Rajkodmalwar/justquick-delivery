@@ -5,6 +5,16 @@ import { cookies } from "next/headers"
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
+  const error = requestUrl.searchParams.get("error")
+  const error_description = requestUrl.searchParams.get("error_description")
+
+  // Handle OAuth errors from Supabase
+  if (error) {
+    console.error("Auth error from Supabase:", error, error_description)
+    return NextResponse.redirect(
+      new URL(`/auth/login?error=${encodeURIComponent(error_description || error)}`, requestUrl.origin)
+    )
+  }
 
   if (code) {
     const cookieStore = await cookies()
@@ -35,10 +45,10 @@ export async function GET(request: NextRequest) {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
       
       if (error) {
-        console.error("Callback error:", error)
-        // Redirect to login with error
+        console.error("Code exchange error:", error)
+        // This usually means the redirect URL is not configured in Supabase
         return NextResponse.redirect(
-          new URL(`/auth/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin)
+          new URL(`/auth/login?error=${encodeURIComponent("Invalid or expired magic link. Please request a new one. If this persists, check that the redirect URL is configured in Supabase settings.")}`, requestUrl.origin)
         )
       }
       
