@@ -44,18 +44,26 @@ export default function LoginPage() {
     const supabase = createClient()
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      console.log("📧 Sending magic link to:", email)
+      console.log("🔗 Redirect URL:", `${window.location.origin}/auth/callback`)
+      
+      const { data, error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         }
       })
 
-      if (error) throw error
+      if (error) {
+        console.error("❌ Magic link error:", error)
+        throw error
+      }
 
+      console.log("✅ Magic link sent successfully")
       setSent(true)
 
     } catch (err: any) {
+      console.error("❌ Login error:", err)
       setError(err.message || "Failed to send magic link. Please try again.")
     } finally {
       setLoading(false)

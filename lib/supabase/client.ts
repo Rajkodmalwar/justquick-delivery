@@ -8,16 +8,16 @@ export const createClient = () => {
       auth: {
         persistSession: true, // Enable session persistence via cookies
         autoRefreshToken: true, // Auto-refresh tokens
-        detectSessionInUrl: true, // Detect session from URL (for magic links)
+        detectSessionInUrl: true, // CRITICAL: Detect session from URL (for magic links)
         flowType: 'pkce', // Use PKCE for better security
-        storageKey: 'justquick_auth', // Custom storage key
+        storageKey: 'justquick_auth', // Custom storage key to avoid conflicts
+        debug: true, // Enable debug logging
       },
       global: {
         headers: {
           'x-client-info': 'justquick-app'
         }
       },
-      // Disable the deprecated localStorage
       db: {
         schema: 'public'
       }
@@ -25,5 +25,15 @@ export const createClient = () => {
   )
 }
 
-// Singleton instance
+// Singleton instance - lazy loaded to prevent build-time initialization
+let supabaseInstance: ReturnType<typeof createClient> | null = null
+
+export const getSupabase = () => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient()
+  }
+  return supabaseInstance
+}
+
+// For backwards compatibility - creates new client each time
 export const supabase = createClient()
