@@ -84,8 +84,6 @@ export function CartCheckout({
     setCheckoutAttempted(true); // ADD THIS LINE
     setCheckoutLoading(true);
     try {
-      console.log("📦 Preparing order data...");
-
       // Ensure all required data is present
       if (!buyer?.phone) {
         throw new Error("Phone number is required");
@@ -113,8 +111,6 @@ export function CartCheckout({
         shop_lng: shopLng,
       };
 
-      console.log("🚀 Sending order request:", orderData);
-
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,7 +118,6 @@ export function CartCheckout({
       });
 
       const responseText = await res.text();
-      console.log("📥 Raw API response:", responseText);
 
       let data;
       try {
@@ -132,14 +127,8 @@ export function CartCheckout({
         throw new Error("Invalid response from server");
       }
 
-      console.log("📊 API response:", data);
-
       if (!res.ok) {
-        console.error("❌ Order API failed:", {
-          status: res.status,
-          statusText: res.statusText,
-          data: data,
-        });
+        console.error("Order API failed:", res.status);
 
         // Show detailed error message
         let errorMessage = "Order failed";
@@ -160,7 +149,6 @@ export function CartCheckout({
         throw new Error(errorMessage);
       }
 
-      console.log("✅ Order successful:", data.order?.id);
       clear();
       setExpanded(false);
       setCheckoutAttempted(false); // Reset after success
@@ -171,7 +159,7 @@ export function CartCheckout({
         router.push("/myorders");
       }
     } catch (error: any) {
-      console.error("💥 Order placement error:", error);
+      console.error("Order placement error:", error.message);
       alert(`Order failed: ${error.message}`);
     } finally {
       setCheckoutLoading(false);

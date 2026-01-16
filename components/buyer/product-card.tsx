@@ -26,12 +26,6 @@ export function ProductCard({ product, shopId }: ProductCardProps) {
   const handleAddToCart = async () => {
     try {
       setAdding(true)
-      console.log("➕ Adding product:", {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        shopId: shopId
-      })
       
       add({
         product_id: product.id,
@@ -50,7 +44,6 @@ export function ProductCard({ product, shopId }: ProductCardProps) {
   }
 
   const handleRemoveFromCart = () => {
-    console.log("➖ Removing product:", product.id)
     remove(product.id)
   }
 

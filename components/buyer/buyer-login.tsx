@@ -61,8 +61,6 @@ export function BuyerLogin({ open, onOpenChange, onSuccess }: BuyerLoginProps) {
 
       // User doesn't exist, send magic link for registration
       const redirectUrl = `${window.location.origin}/auth/callback`
-      console.log("Sending magic link to:", email)
-      console.log("Redirect URL:", redirectUrl)
 
       const { error: magicError } = await supabase.auth.signInWithOtp({
         email: email.trim(),
@@ -76,7 +74,7 @@ export function BuyerLogin({ open, onOpenChange, onSuccess }: BuyerLoginProps) {
       })
 
       if (magicError) {
-        console.error("Magic link error:", magicError)
+        console.error("Magic link error:", magicError.message)
         
         if (magicError.message.includes("already registered") || 
             magicError.message.includes("User already registered")) {
@@ -98,11 +96,9 @@ export function BuyerLogin({ open, onOpenChange, onSuccess }: BuyerLoginProps) {
 
       setSuccess(true)
       setEmailSent(email)
-      
-      console.log("Magic link sent successfully")
 
     } catch (err: any) {
-      console.error("Registration error:", err)
+      console.error("Registration error:", err.message)
       setError(err.message || "Failed to register. Please try again.")
     } finally {
       setLoading(false)
