@@ -9,7 +9,7 @@ export const createClient = () => {
         persistSession: true, // Enable session persistence via cookies
         autoRefreshToken: true, // Auto-refresh tokens
         detectSessionInUrl: true, // CRITICAL: Detect session from URL (for magic links)
-        flowType: 'pkce', // Use PKCE for better security
+        // Note: Don't use PKCE with OTP flow - they have conflicting requirements
       },
       global: {
         headers: {
