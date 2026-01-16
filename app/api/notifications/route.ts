@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseServer, getSupabaseAdmin } from "@/lib/supabase/server";
 
+export const dynamic = 'force-dynamic'
+
 // =====================================
 // GET — Logged-in Users Only
 // Returns notifications based on user role

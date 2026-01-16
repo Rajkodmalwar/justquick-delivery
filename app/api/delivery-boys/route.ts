@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getSupabaseServer } from "@/lib/supabase/server"
 import { generateLoginCode } from "@/lib/utils/generate-code"
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const loginCode = searchParams.get("login_code")

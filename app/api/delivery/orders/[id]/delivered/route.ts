@@ -3,6 +3,8 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { timelineHelpers } from "@/lib/order-timeline"
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

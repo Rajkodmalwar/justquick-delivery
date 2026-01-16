@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { getSupabaseServer } from "@/lib/supabase/server"
 import { commissionFromDistanceKm, haversineKm } from "@/lib/geo"
 
+export const dynamic = 'force-dynamic'
+
 export async function POST() {
   const supabase = await getSupabaseServer()
   const { data: orders, error } = await supabase.from("orders").select("*").eq("status", "delivered")
