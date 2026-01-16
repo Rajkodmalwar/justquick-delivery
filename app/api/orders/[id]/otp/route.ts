@@ -13,6 +13,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const { id } = await params
     const { otp, delivery_boy_id } = await req.json()
+    const supabase = getSupabase()
 
     if (!delivery_boy_id) {
       return NextResponse.json({ error: "Delivery boy ID required" }, { status: 400 })
