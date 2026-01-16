@@ -1,0 +1,194 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* Typography */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", monospace;
+
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  /* Dark Theme Colors */
+  --color-background: #0f172a;
+  --color-foreground: #f1f5f9;
+  --color-card: #1e293b;
+  --color-card-foreground: #f1f5f9;
+  --color-popover: #1e293b;
+  --color-popover-foreground: #f1f5f9;
+  
+  /* Cyan/Blue Accents */
+  --color-primary: #06b6d4;
+  --color-primary-foreground: #0f172a;
+  --color-secondary: #334155;
+  --color-secondary-foreground: #f1f5f9;
+  
+  /* Neutrals */
+  --color-muted: #475569;
+  --color-muted-foreground: #cbd5e1;
+  --color-accent: #0ea5e9;
+  --color-accent-foreground: #0f172a;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #f1f5f9;
+  --color-border: #334155;
+  --color-input: #1e293b;
+  --color-ring: #06b6d4;
+  
+  /* Charts */
+  --color-chart-1: #06b6d4;
+  --color-chart-2: #10b981;
+  --color-chart-3: #f59e0b;
+  --color-chart-4: #3b82f6;
+  --color-chart-5: #ec4899;
+  
+  /* Sidebar */
+  --color-sidebar: #1e293b;
+  --color-sidebar-foreground: #f1f5f9;
+  --color-sidebar-primary: #06b6d4;
+  --color-sidebar-primary-foreground: #0f172a;
+  --color-sidebar-accent: #334155;
+  --color-sidebar-accent-foreground: #f1f5f9;
+  --color-sidebar-border: #334155;
+  --color-sidebar-ring: #06b6d4;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply bg-background;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rounding" 1;
+  }
+}
+
+@layer utilities {
+  /* Grid background pattern */
+  .bg-grid-slate-800 {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect x='0' y='0' width='16' height='16' fill='%231e293b'/%3E%3Cpath d='M 0 0 L 16 0 L 16 16 L 0 16 Z' stroke='%23475569' stroke-width='0.5' fill='none'/%3E%3C/svg%3E");
+  }
+
+  /* Button gradients */
+  .btn-primary-glow {
+    @apply bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white shadow-lg shadow-cyan-500/30 border-0;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary-glow:hover {
+    @apply shadow-lg shadow-cyan-600/40;
+    transform: translateY(-2px);
+  }
+
+  /* Glass morphism header */
+  .glass-header {
+    @apply backdrop-blur-md bg-slate-950/80 border-b border-slate-800/50;
+  }
+
+  /* Card hover effects */
+  .card-hover {
+    @apply transition-all duration-300 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/10;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent;
+  }
+
+  /* Badge fresh */
+  .fresh-badge {
+    @apply bg-gradient-to-r from-cyan-500 to-emerald-500 text-white;
+  }
+
+  /* Product card smooth animation */
+  .product-card {
+    @apply transition-all duration-300;
+  }
+
+  .product-card:hover {
+    @apply -translate-y-1 shadow-lg shadow-cyan-500/20;
+  }
+
+  /* Smooth input focus */
+  .input-smooth {
+    @apply focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500 transition-all duration-200;
+  }
+
+  /* Skeleton loading */
+  .skeleton-pulse {
+    @apply animate-pulse bg-slate-800/50;
+  }
+
+  /* Gradient overlay */
+  .gradient-overlay {
+    @apply before:absolute before:inset-0 before:bg-gradient-to-br before:from-cyan-500/5 before:to-blue-500/5;
+  }
+
+  /* Custom stepper styles */
+  .stepper-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem;
+  }
+  .stepper-btn {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    transition: all 0.15s ease;
+  }
+  .stepper-btn-minus {
+    background: #e5e5e5;
+    color: #525252;
+  }
+  .stepper-btn-minus:hover {
+    background: #d4d4d4;
+  }
+  .stepper-btn-plus {
+    background: #6c5ce7;
+    color: white;
+  }
+  .stepper-btn-plus:hover {
+    background: #5b4cdb;
+  }
+  .countdown-timer {
+    font-family: ui-monospace, monospace;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .search-massive {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  .category-pill {
+    background: #f0f0f5;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .category-pill:hover,
+  .category-pill.active {
+    background: #6c5ce7;
+    color: white;
+  }
+  .glass-header {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #e5e5e5;
+  }
+}
