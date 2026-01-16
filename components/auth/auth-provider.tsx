@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState<string | null>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   // Convert Supabase user to our AuthUser format with role
   const formatUser = async (supabaseUser: User | null): Promise<AuthUser | null> => {
@@ -66,10 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile = data
       } catch (profileError) {
         // Profile not found or other error - that's okay
-        console.log("Profile fetch optional error:", profileError)
+        console.log("Profile fetch optional")
       }
 
-      return {
+      const formattedUser = {
         id: supabaseUser.id,
         email: supabaseUser.email || '',
         name: profile?.name || supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
@@ -77,6 +78,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         address: profile?.address || supabaseUser.user_metadata?.address || '',
         role: userRole as any
       }
+      
+      // Cache in session storage (more browser-friendly than localStorage)
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('jq_user_cache', JSON.stringify(formattedUser))
+        }
+      } catch (e) {
+        // Ignore storage errors
+      }
+      
+      return formattedUser
     } catch (error) {
       console.error("Error formatting user:", error)
       // Fallback to basic info
@@ -102,6 +114,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(formattedUser)
         setRole(formattedUser?.role || null)
       } else {
+        // Try to use cached user as fallback
+        try {
+          if (typeof sessionStorage !== 'undefined') {
+            const cached = sessionStorage.getItem('jq_user_cache')
+            if (cached) {
+              const cachedUser = JSON.parse(cached)
+              // But still show loading to verify session
+              setUser(null)
+              setRole(null)
+            }
+          }
+        } catch (e) {
+          // Ignore
+        }
+        
         setUser(null)
         setRole(null)
       }
@@ -111,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRole(null)
     } finally {
       setLoading(false)
+      setIsInitialized(true)
     }
   }
 
@@ -168,20 +196,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // Load initial session
     loadSession()
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state change:", event, session?.user?.email)
-        
-        if (session?.user) {
-          const formattedUser = await formatUser(session.user)
-          setUser(formattedUser)
-          setRole(formattedUser?.role || null)
-        } else {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          if (session?.user) {
+            const formattedUser = await formatUser(session.user)
+            setUser(formattedUser)
+            setRole(formattedUser?.role || null)
+          }
+        } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setRole(null)
+          // Clear cache
+          try {
+            if (typeof sessionStorage !== 'undefined') {
+              sessionStorage.removeItem('jq_user_cache')
+            }
+          } catch (e) {
+            // Ignore
+          }
         }
         setLoading(false)
       }
