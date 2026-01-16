@@ -15,9 +15,5 @@
       "type": "string"
     }
   ],
-  "buildOutputDirectory": ".next",
-  "publicSource": "./public",
-  "cleanUrls": true,
-  "skipDownload": false,
-  "crons": []
+  "cleanUrls": true
 }
