@@ -10,8 +10,6 @@ export const createClient = () => {
         autoRefreshToken: true, // Auto-refresh tokens
         detectSessionInUrl: true, // CRITICAL: Detect session from URL (for magic links)
         flowType: 'pkce', // Use PKCE for better security
-        storageKey: 'justquick_auth', // Custom storage key to avoid conflicts
-        debug: true, // Enable debug logging
       },
       global: {
         headers: {
