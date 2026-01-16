@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js"
 
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
+// Lazy init
+const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
     }
 
     // ✅ NO AUTH CHECK - fetch directly by delivery_boy_id
-    const { data: orders, error } = await supabase
+    const { data: orders, error } = await getSupabase()
       .from("orders")
       .select("*")
       .eq("delivery_boy_id", finalId)

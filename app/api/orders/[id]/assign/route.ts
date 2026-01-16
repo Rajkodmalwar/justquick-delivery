@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js"
 
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
+// Lazy init
+const getSupabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
@@ -21,7 +22,7 @@ export async function POST(
     }
 
     // 1️⃣ Fetch order
-    const { data: order, error: fetchErr } = await supabase
+    const { data: order, error: fetchErr } = await getSupabase()
       .from("orders")
       .select("*")
       .eq("id", id)
@@ -37,7 +38,7 @@ export async function POST(
     }
 
     // 3️⃣ Assign delivery + timeline (ATOMIC)
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("orders")
       .update({
         delivery_boy_id,

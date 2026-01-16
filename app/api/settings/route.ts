@@ -3,8 +3,8 @@ import { createClient } from "@supabase/supabase-js"
 
 export const dynamic = 'force-dynamic'
 
-// Use service role key to bypass RLS
-const supabaseAdmin = createClient(
+// Helper to get supabase client (lazy init)
+const getSupabaseAdmin = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY! // CRITICAL: Use service role key
 )
@@ -60,7 +60,7 @@ const transformSettingsToObject = (rows: any[]) => {
 export async function GET(request: NextRequest) {
   try {
     // Get ALL settings as key-value rows using admin client
-    const { data: settingsRows, error } = await supabaseAdmin
+    const { data: settingsRows, error } = await getSupabaseAdmin()
       .from("settings")
       .select("key, value")
       .order("key", { ascending: true })
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
           ]
           
           // Insert defaults
-          const { error: insertError } = await supabaseAdmin
+          const { error: insertError } = await getSupabaseAdmin()
             .from("settings")
             .insert(defaults)
           
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert the setting using admin client (bypasses RLS)
-    const { data, error: upsertError } = await supabaseAdmin
+    const { data, error: upsertError } = await getSupabaseAdmin()
       .from("settings")
       .upsert(
         { 
@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
       // If it's an RLS error, try to create the setting
       if (upsertError.code === '42501') {
         // Try to insert as new record
-        const { error: insertError } = await supabaseAdmin
+        const { error: insertError } = await getSupabaseAdmin()
           .from("settings")
           .insert({ key, value, updated_at: new Date().toISOString() })
         
