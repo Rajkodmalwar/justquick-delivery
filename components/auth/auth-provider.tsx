@@ -109,16 +109,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("🔄 Loading session...")
       setLoading(true)
       
-      // Use getUser() instead of getSession() - more reliable for SSR/cookie-based auth
-      const { data: { user }, error } = await supabase.auth.getUser()
+      const { data: { session }, error } = await supabase.auth.getSession()
       
       if (error) {
         console.warn("Session error:", error)
       }
       
-      if (user) {
-        console.log("✅ Session found for:", user.email)
-        const formattedUser = await formatUser(user)
+      if (session?.user) {
+        console.log("✅ Session found for:", session.user.email)
+        const formattedUser = await formatUser(session.user)
         setUser(formattedUser)
         setRole(formattedUser?.role || null)
         

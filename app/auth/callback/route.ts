@@ -3,36 +3,36 @@ import { NextRequest, NextResponse } from "next/server"
 export const dynamic = 'force-dynamic'
 
 /**
- * CALLBACK ROUTE - Preserves code in redirect
+ * CALLBACK ROUTE - Magic Link Handler
  * 
- * With flowType: 'pkce' and detectSessionInUrl: true, the client-side
- * Supabase client will automatically detect code/token_hash in the URL
- * and exchange it using the PKCE code verifier from browser storage.
+ * Flow:
+ * 1. User clicks magic link: /auth/callback?code=X&token_hash=Y
+ * 2. Client detects code/token_hash in URL
+ * 3. Client PKCE exchanges code for session (uses code verifier from browser)
+ * 4. Session cookies are set automatically
+ * 5. We redirect to /shops
+ * 6. Auth provider picks up session from cookies
  * 
- * We redirect to /shops but KEEP the code/token_hash in the URL so the
- * client can detect and exchange them.
+ * SERVER DOES NOT exchange code - client does it with PKCE verifier
  */
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
-  
-  console.log("🔐 Callback route - preserving code in URL")
-  
-  // Extract code and token_hash from URL
   const code = requestUrl.searchParams.get("code")
   const tokenHash = requestUrl.searchParams.get("token_hash")
   
+  console.log("🔐 Callback hit - code:", !!code, "token_hash:", !!tokenHash)
+  
+  // Missing parameters = authentication failed upstream
   if (!code || !tokenHash) {
-    console.error("❌ Missing code or token_hash")
+    console.error("❌ Missing code or token_hash in callback URL")
     return NextResponse.redirect(new URL("/auth/login", requestUrl.origin))
   }
   
-  // Redirect to /shops but KEEP the code/token_hash in URL
-  // This allows the client-side Supabase client (with detectSessionInUrl: true)
-  // to detect and exchange the code using the PKCE verifier
+  // Preserve code/token_hash in redirect so client can detect it
   const shopsUrl = new URL("/shops", requestUrl.origin)
   shopsUrl.searchParams.set("code", code)
   shopsUrl.searchParams.set("token_hash", tokenHash)
   
-  console.log("✅ Redirecting to /shops with code preserved")
+  console.log("✅ Redirecting to /shops - client will exchange code")
   return NextResponse.redirect(shopsUrl.toString())
 }
