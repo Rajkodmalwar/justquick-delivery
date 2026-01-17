@@ -10,24 +10,18 @@ export async function GET(request: NextRequest) {
   const error = requestUrl.searchParams.get("error")
   const error_description = requestUrl.searchParams.get("error_description")
 
-  console.log("🔍 Callback route called with:", {
-    code: code ? code.substring(0, 10) + "..." : null,
-    error,
-    error_description,
+  console.log("🔍 Callback route called:", {
+    hasCode: !!code,
+    hasError: !!error,
     url: request.url
   })
 
-  // Handle OAuth errors from Supabase
+  // Handle errors from Supabase
   if (error) {
-    console.error("❌ Auth error from Supabase:", error, error_description)
+    console.error("❌ Supabase error:", error, error_description)
     return NextResponse.redirect(
       new URL(`/auth/login?error=${encodeURIComponent(error_description || error)}`, requestUrl.origin)
     )
-  }
-
-  if (!code) {
-    console.error("❌ No code parameter received")
-    return NextResponse.redirect(new URL("/auth/login?error=No%20code%20provided", requestUrl.origin))
   }
 
   try {
@@ -54,47 +48,42 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Exchange the code for a session
-    console.log("🔄 Exchanging code for session...")
-    const { data: { session }, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-    
-    if (exchangeError) {
-      console.error("❌ Code exchange failed:", exchangeError.message)
-      return NextResponse.redirect(
-        new URL(
-          `/auth/login?error=${encodeURIComponent(
-            "Magic link invalid or expired. Please request a new one. Make sure https://hyperlocal-delivery-app.vercel.app/auth/callback is added in Supabase → Authentication → URL Configuration"
-          )}`,
-          requestUrl.origin
+    // For magic links with code, exchange it
+    if (code) {
+      console.log("🔄 Exchanging OTP code for session...")
+      const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+      
+      if (exchangeError) {
+        console.error("❌ Code exchange failed:", exchangeError.message)
+        return NextResponse.redirect(
+          new URL(`/auth/login?error=${encodeURIComponent("Magic link invalid or expired. Request a new one.")}`, requestUrl.origin)
         )
-      )
+      }
+
+      if (data?.session?.user?.email) {
+        console.log("✅ User authenticated:", data.session.user.email)
+      }
     }
 
-    if (!session?.user) {
-      console.error("❌ No session returned after code exchange")
-      return NextResponse.redirect(
-        new URL("/auth/login?error=Failed%20to%20create%20session", requestUrl.origin)
-      )
-    }
-
-    console.log("✅ User authenticated via callback:", session.user.email)
+    // Get the current session (either from code exchange or from URL detection)
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    // Check if user is new (no phone number in metadata)
-    const isNewUser = !session.user.user_metadata?.phone
-    const redirectUrl = isNewUser 
-      ? new URL("/profile?newUser=true", requestUrl.origin)
-      : new URL("/shops", requestUrl.origin)
+    if (sessionError || !session?.user) {
+      console.error("❌ No valid session:", sessionError?.message)
+      return NextResponse.redirect(
+        new URL("/auth/login?error=Session%20creation%20failed", requestUrl.origin)
+      )
+    }
 
-    console.log("📍 Redirecting to:", redirectUrl.pathname)
-    return NextResponse.redirect(redirectUrl)
+    console.log("✅ Session established for:", session.user.email)
+    
+    // Redirect to home or profile
+    return NextResponse.redirect(new URL("/shops", requestUrl.origin))
     
   } catch (error: any) {
-    console.error("❌ Unexpected error in callback:", error.message || error)
+    console.error("❌ Callback error:", error)
     return NextResponse.redirect(
-      new URL(
-        `/auth/login?error=${encodeURIComponent("Authentication failed: " + (error.message || "Unknown error"))}`,
-        requestUrl.origin
-      )
+      new URL(`/auth/login?error=${encodeURIComponent("Authentication failed")}`, requestUrl.origin)
     )
   }
 }
