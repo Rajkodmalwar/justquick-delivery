@@ -9,7 +9,8 @@ export async function GET(request: NextRequest) {
   
   console.log("🔐 Callback triggered")
   console.log("📍 Full URL:", requestUrl.toString())
-  console.log("📍 Search params:", requestUrl.search)
+  console.log("📍 Code:", requestUrl.searchParams.get("code") ? "present" : "MISSING")
+  console.log("📍 Token hash:", requestUrl.searchParams.get("token_hash") ? "present" : "MISSING")
 
   try {
     const cookieStore = await cookies()
@@ -35,26 +36,24 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    console.log("🔄 Exchanging code for session...")
-    // This will handle the OTP code from the URL
+    console.log("🔄 Exchanging OTP code for session...")
     const { data, error } = await supabase.auth.exchangeCodeForSession(requestUrl.toString())
     
-    console.log("📦 Exchange result - data:", !!data, "error:", error?.message)
-    
     if (error) {
-      console.error("❌ Auth error:", error.message)
+      console.error("❌ Exchange failed:", error.message)
       const loginUrl = new URL("/auth/login", requestUrl.origin)
-      loginUrl.searchParams.set("error", error.message)
+      loginUrl.searchParams.set("error", `Authentication failed: ${error.message}`)
       return NextResponse.redirect(loginUrl.toString())
     }
 
     if (!data.session) {
-      console.error("❌ No session received")
+      console.error("❌ No session in exchange response")
       return NextResponse.redirect(new URL("/auth/login", requestUrl.origin))
     }
 
-    console.log("✅ Session created, redirecting to /shops")
-    // Redirect to home after successful auth
+    console.log(`✅ Session created for user: ${data.session.user.email}`)
+    console.log("📝 Redirecting to /shops")
+    
     return NextResponse.redirect(new URL("/shops", requestUrl.origin))
     
   } catch (error) {
