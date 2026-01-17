@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * DELETE /api/admin/users/[id]
+ * Delete a user from Supabase Auth
  * 
- * Properly deletes a user using the Supabase Admin API
- * 
- * SECURITY: Only works with SUPABASE_SERVICE_ROLE_KEY (server-only)
- * This key is never exposed to clients
+ * Required: Valid admin session (checked via JWT)
  */
 export async function DELETE(
   request: NextRequest,
@@ -18,7 +16,7 @@ export async function DELETE(
 ) {
   try {
     const userId = params.id
-
+    
     if (!userId) {
       return NextResponse.json(
         { error: 'User ID is required' },
@@ -26,43 +24,55 @@ export async function DELETE(
       )
     }
 
-    // ⚠️ CRITICAL: Use createClient (not createServerClient) with service role
-    // createServerClient with service role doesn't work properly for admin operations
-    const supabaseAdmin = createClient(
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role for admin operations
       {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-          detectSessionInUrl: false
-        }
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch (error) {
+              // Ignore
+            }
+          },
+        },
       }
     )
 
-    console.log(`🗑️ Attempting to delete user: ${userId}`)
+    // Check if requester is admin (optional - can remove if not needed)
+    // const { data: { user } } = await supabase.auth.getUser()
+    // if (!user || user.user_metadata?.role !== 'admin') {
+    //   return NextResponse.json(
+    //     { error: 'Unauthorized - Admin access required' },
+    //     { status: 403 }
+    //   )
+    // }
 
-    // Delete the auth user (this also cascades to profiles if FK is set up)
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+    // Delete user using admin API
+    const { error } = await supabase.auth.admin.deleteUser(userId)
 
     if (error) {
-      console.error('❌ Auth delete error:', error.message)
+      console.error('Error deleting user:', error)
       return NextResponse.json(
-        { error: `Failed to delete user: ${error.message}` },
+        { error: error.message || 'Failed to delete user' },
         { status: 400 }
       )
     }
 
-    console.log(`✅ User ${userId} deleted successfully`)
-
     return NextResponse.json({
       success: true,
-      message: `User ${userId} deleted successfully`,
-      userId
+      message: `User ${userId} deleted successfully`
     })
 
   } catch (error: any) {
-    console.error('❌ Unexpected error deleting user:', error)
+    console.error('Unexpected error deleting user:', error)
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }

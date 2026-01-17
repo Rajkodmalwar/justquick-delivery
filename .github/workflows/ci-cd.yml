@@ -38,7 +38,7 @@ jobs:
         run: pnpm type-check || true
       
       - name: Build project
-        run: pnpm build || true
+        run: pnpm build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -56,13 +56,32 @@ jobs:
       - name: Check for vulnerabilities
         run: npm audit --production || true
 
+  deploy-preview:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Vercel Preview
+        uses: vercel/action@v3
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+
   deploy-production:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [lint-and-test, security-audit]
     
     steps:
-      - name: Trigger Vercel Deployment
-        run: |
-          echo "✅ CI/CD pipeline passed. Vercel will auto-deploy via GitHub integration."
-          echo "Check Vercel dashboard: https://vercel.com/dashboard"
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Vercel Production
+        uses: vercel/action@v3
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
