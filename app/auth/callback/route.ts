@@ -6,6 +6,10 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
+  
+  console.log("🔐 Callback triggered")
+  console.log("📍 Full URL:", requestUrl.toString())
+  console.log("📍 Search params:", requestUrl.search)
 
   try {
     const cookieStore = await cookies()
@@ -31,19 +35,30 @@ export async function GET(request: NextRequest) {
       }
     )
 
+    console.log("🔄 Exchanging code for session...")
     // This will handle the OTP code from the URL
     const { data, error } = await supabase.auth.exchangeCodeForSession(requestUrl.toString())
     
-    if (error || !data.session) {
-      console.error("Auth error:", error)
+    console.log("📦 Exchange result - data:", !!data, "error:", error?.message)
+    
+    if (error) {
+      console.error("❌ Auth error:", error.message)
+      const loginUrl = new URL("/auth/login", requestUrl.origin)
+      loginUrl.searchParams.set("error", error.message)
+      return NextResponse.redirect(loginUrl.toString())
+    }
+
+    if (!data.session) {
+      console.error("❌ No session received")
       return NextResponse.redirect(new URL("/auth/login", requestUrl.origin))
     }
 
+    console.log("✅ Session created, redirecting to /shops")
     // Redirect to home after successful auth
     return NextResponse.redirect(new URL("/shops", requestUrl.origin))
     
   } catch (error) {
-    console.error("Callback error:", error)
+    console.error("❌ Callback error:", error)
     return NextResponse.redirect(new URL("/auth/login", requestUrl.origin))
   }
 }
