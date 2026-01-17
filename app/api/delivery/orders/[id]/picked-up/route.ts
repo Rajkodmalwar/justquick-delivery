@@ -39,8 +39,8 @@ export async function POST(
     )
 
     // Check authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }

@@ -147,8 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Update buyer info
   const setBuyerInfo = async (data: Partial<AuthUser>) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) throw new Error("Not authenticated")
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("Not authenticated")
 
       // Update user metadata
       const { error: metadataError } = await supabase.auth.updateUser({
@@ -166,11 +166,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase
           .from('profiles')
           .upsert({
-            id: session.user.id,
+            id: user.id,
             name: data.name,
             phone: data.phone,
             address: data.address,
-            email: session.user.email,
+            email: user.email,
             updated_at: new Date().toISOString()
           })
       } catch (profileError) {

@@ -119,19 +119,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true)
       
-      // Get session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      // Get user
+      const { data: { user }, error: sessionError } = await supabase.auth.getUser()
       
       if (sessionError) {
-        console.error("Session error:", sessionError)
+        console.error("User error:", sessionError)
       }
       
-      if (session?.user) {
-        console.log("✅ Found session for:", session.user.email)
-        await loadUserData(session.user)
+      if (user) {
+        console.log("✅ Found user:", user.email)
+        await loadUserData(user)
         
         // If user is admin, don't show buyer cart - admin shouldn't shop
-        const role = session.user.user_metadata?.role
+        const role = user.user_metadata?.role
         if (role === "admin") {
           console.log("⚠️ Admin detected - clearing cart context")
           setItems([]) // Clear cart for admin
@@ -205,9 +205,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Refresh user data
   const refreshUser = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        await loadUserData(session.user)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await loadUserData(user)
       } else {
         setIsAuthenticated(false)
         setBuyer(null)
@@ -284,8 +284,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Update buyer info and sync to Supabase profiles table
   const handleSetBuyer = async (buyerData: Buyer) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
         console.error("Not authenticated when setting buyer")
         throw new Error("Not authenticated")
       }

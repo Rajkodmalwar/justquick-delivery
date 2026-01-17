@@ -51,8 +51,8 @@ export async function PATCH(
     )
 
     // Check authentication
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
@@ -60,7 +60,7 @@ export async function PATCH(
     }
 
     // MUST BE ADMIN
-    const userRole = session.user.user_metadata?.role
+    const userRole = user.user_metadata?.role
     if (userRole !== "admin") {
       return NextResponse.json(
         { 

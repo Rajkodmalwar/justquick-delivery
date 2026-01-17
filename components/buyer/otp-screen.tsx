@@ -121,15 +121,15 @@ export function OtpScreen({ phone, onSuccess, onError }: OtpScreenProps) {
 
       if (error) throw error
 
-      // Get user session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      // Get user
+      const { data: { user }, error: sessionError } = await supabase.auth.getUser()
       
       if (sessionError) throw sessionError
 
-      if (session?.user) {
-        onSuccess(session.user)
+      if (user) {
+        onSuccess(user)
       } else {
-        throw new Error("Failed to get user session")
+        throw new Error("Failed to get user")
       }
 
     } catch (err: any) {

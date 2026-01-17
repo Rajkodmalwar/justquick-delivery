@@ -19,13 +19,13 @@ export function useBuyer() {
   useEffect(() => {
     // Check initial session
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+      const { data: { user } } = await supabase.auth.getUser()
       
-      if (session?.user) {
+      if (user) {
         setBuyer({
-          id: session.user.id,
-          email: session.user.email!,
-          user_metadata: session.user.user_metadata
+          id: user.id,
+          email: user.email!,
+          user_metadata: user.user_metadata
         })
       }
       
