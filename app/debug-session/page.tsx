@@ -3,6 +3,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { useEffect } from "react";
 
+export const dynamic = 'force-dynamic';
+
 export default function DebugSession() {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
