@@ -9,6 +9,7 @@ export const createClient = () => {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
+        flowType: 'pkce', // Required for OTP magic links
       }
     }
   )
