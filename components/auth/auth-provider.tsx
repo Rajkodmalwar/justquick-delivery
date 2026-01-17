@@ -109,15 +109,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("🔄 Loading session...")
       setLoading(true)
       
-      const { data: { session }, error } = await supabase.auth.getSession()
+      const { data: { user }, error } = await supabase.auth.getUser()
       
       if (error) {
         console.warn("Session error:", error)
       }
       
-      if (session?.user) {
-        console.log("✅ Session found for:", session.user.email)
-        const formattedUser = await formatUser(session.user)
+      if (user) {
+        console.log("✅ Session found for:", user.email)
+        const formattedUser = await formatUser(user)
         setUser(formattedUser)
         setRole(formattedUser?.role || null)
         
