@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServer } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,7 @@ export const dynamic = 'force-dynamic'
  * Response:
  * - success: boolean
  * - user: { id, email, name, role }
- * - session: auth session data
+ * - Cookies set automatically by middleware
  */
 export async function POST(request: NextRequest) {
   try {
@@ -54,8 +55,32 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ User verified with OTP: ${data.user.email}`)
 
-    // Session is automatically set in cookies by the server client
-    // Middleware will handle cookie refresh
+    // Set session cookies manually if not already set by getSupabaseServer
+    if (data.session) {
+      const cookieStore = await cookies()
+      
+      // Set access token cookie
+      if (data.session.access_token) {
+        cookieStore.set('sb-access-token', data.session.access_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: data.session.expires_in || 3600,
+          path: '/',
+        })
+      }
+
+      // Set refresh token cookie
+      if (data.session.refresh_token) {
+        cookieStore.set('sb-refresh-token', data.session.refresh_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60, // 7 days
+          path: '/',
+        })
+      }
+    }
 
     return NextResponse.json({
       success: true,
