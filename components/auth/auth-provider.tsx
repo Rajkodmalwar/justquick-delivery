@@ -185,9 +185,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Logout
   const logout = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setRole(null)
+    try {
+      console.log("🚪 Logging out...")
+      
+      // Call server logout endpoint to clear session
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include', // Include cookies
+      })
+      
+      if (response.ok) {
+        console.log("✅ Logout successful")
+      } else {
+        console.warn("Logout response not ok:", response.status)
+      }
+      
+      // Clear local state
+      setUser(null)
+      setRole(null)
+      setLoading(false)
+      
+      // Clear cache
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.removeItem('jq_user_cache')
+        }
+      } catch (e) {
+        console.warn("Cache clear error:", e)
+      }
+    } catch (error) {
+      console.error("❌ Logout error:", error)
+      // Still clear local state even if request fails
+      setUser(null)
+      setRole(null)
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
