@@ -34,29 +34,30 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getSupabaseServer()
 
-    // Send OTP for password-based account (not magic link)
+    // Send OTP - this works for both existing and new users
+    // Supabase will generate a 6-digit code and send it via email
     const { data, error } = await supabase.auth.signInWithOtp({
       email: email.toLowerCase().trim(),
       options: {
-        // For password-based accounts, we send OTP only
-        // Not a magic link - user enters OTP manually
-        shouldCreateUser: false, // Don't create if doesn't exist
+        shouldCreateUser: true, // Allow both new and existing users
+        // For OTP, email will NOT create a magic link
+        // Instead, Supabase sends a 6-digit code
       },
     })
 
     if (error) {
       console.error('❌ Send OTP error:', error)
-      // Don't reveal if user exists or not (security)
+      // Log full error for debugging
+      console.error('Error details:', error.message, error.status)
+      
       return NextResponse.json(
-        { 
-          success: true,
-          message: 'If this email exists, we\'ve sent an OTP code. Check your email.' 
-        },
-        { status: 200 }
+        { error: `Failed to send OTP: ${error.message}` },
+        { status: 400 }
       )
     }
 
     console.log(`✅ OTP sent to: ${email}`)
+    console.log('Response data:', data)
 
     return NextResponse.json({
       success: true,
