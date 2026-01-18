@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   /* Typography */
   --font-sans: ui-sans-serif, system-ui, -apple-system, sans-serif;
