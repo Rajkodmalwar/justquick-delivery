@@ -224,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.warn("Cache error:", e)
             }
           }
+          setLoading(false)
         } else if (event === 'SIGNED_OUT') {
           console.log("🚪 User signed out")
           setUser(null)
@@ -236,8 +237,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch (e) {
             console.warn("Cache clear error:", e)
           }
+          setLoading(false)
         }
-        setLoading(false)
       }
     )
 
