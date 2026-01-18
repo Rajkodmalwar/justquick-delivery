@@ -52,10 +52,10 @@ export async function middleware(request: NextRequest) {
         error,
       } = await supabase.auth.getUser();
 
-      // Not authenticated - redirect to login
+      // Not authenticated - redirect to admin login
       if (error || !user) {
         console.log("🚫 Unauthorized admin access attempt - no user");
-        return NextResponse.redirect(new URL("/auth/login", request.url));
+        return NextResponse.redirect(new URL("/admin/login", request.url));
       }
 
       // Check admin role from user metadata or database
@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
       console.log("✅ Admin user allowed:", user.email);
     } catch (error) {
       console.error("❌ Auth check failed:", error);
-      return NextResponse.redirect(new URL("/auth/login", request.url));
+      return NextResponse.redirect(new URL("/admin/login", request.url));
     }
   }
 
