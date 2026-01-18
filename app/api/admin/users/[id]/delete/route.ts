@@ -72,6 +72,7 @@ export async function DELETE(
 
   } catch (error: any) {
     console.error('❌ Unexpected error deleting user:', error)
+    return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
     )
