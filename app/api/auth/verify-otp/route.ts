@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.auth.verifyOtp({
       email: email.toLowerCase().trim(),
       token: token.trim(),
-      type: type as 'sms' | 'email',
+      type: 'email',
     })
 
     if (error) {

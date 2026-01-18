@@ -106,29 +106,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Load user session
   const loadSession = async () => {
     try {
-      console.log("🔄 Loading session...")
+      console.log("🔄 Loading session from server...")
       setLoading(true)
       
-      const { data: { user }, error } = await supabase.auth.getUser()
+      // Call our endpoint that reads the session from server cookies
+      const response = await fetch('/api/auth/session', {
+        method: 'GET',
+        credentials: 'include', // Include cookies
+        cache: 'no-store'
+      })
       
-      if (error) {
-        console.warn("Session error:", error)
-      }
+      const data = await response.json()
       
-      if (user) {
-        console.log("✅ Session found for:", user.email)
-        const formattedUser = await formatUser(user)
-        setUser(formattedUser)
-        setRole(formattedUser?.role || null)
-        
-        // Cache the user data
-        try {
-          if (typeof sessionStorage !== 'undefined') {
-            sessionStorage.setItem('jq_user_cache', JSON.stringify(formattedUser))
-          }
-        } catch (e) {
-          console.warn("Cache error:", e)
-        }
+      if (data.user) {
+        console.log("✅ Session found for:", data.user.email)
+        setUser(data.user)
+        setRole(data.user.role || null)
       } else {
         console.log("❌ No session found")
         setUser(null)
@@ -200,49 +193,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     console.log("🔐 Setting up auth listener...")
     
-    // Load initial session
+    let isMounted = true
+
+    // Load initial session from server
     loadSession()
 
-    // Listen for auth changes
+    // Listen for auth changes from Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("🔄 Auth event:", event, session?.user?.email)
         
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
-          if (session?.user) {
-            console.log("✅ User session updated:", session.user.email)
-            const formattedUser = await formatUser(session.user)
-            setUser(formattedUser)
-            setRole(formattedUser?.role || null)
-            
-            // Cache the user
+        if (isMounted) {
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
+            if (session?.user) {
+              console.log("✅ User session updated:", session.user.email)
+              // Re-fetch from server to ensure we have latest data
+              await loadSession()
+            }
+          } else if (event === 'SIGNED_OUT') {
+            console.log("🚪 User signed out")
+            setUser(null)
+            setRole(null)
+            setLoading(false)
+            // Clear cache
             try {
               if (typeof sessionStorage !== 'undefined') {
-                sessionStorage.setItem('jq_user_cache', JSON.stringify(formattedUser))
+                sessionStorage.removeItem('jq_user_cache')
               }
             } catch (e) {
-              console.warn("Cache error:", e)
+              console.warn("Cache clear error:", e)
             }
           }
-          setLoading(false)
-        } else if (event === 'SIGNED_OUT') {
-          console.log("🚪 User signed out")
-          setUser(null)
-          setRole(null)
-          // Clear cache
-          try {
-            if (typeof sessionStorage !== 'undefined') {
-              sessionStorage.removeItem('jq_user_cache')
-            }
-          } catch (e) {
-            console.warn("Cache clear error:", e)
-          }
-          setLoading(false)
         }
       }
     )
 
     return () => {
+      isMounted = false
       console.log("🧹 Cleaning up auth listener")
       subscription.unsubscribe()
     }

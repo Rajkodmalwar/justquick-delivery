@@ -44,8 +44,10 @@ export function UserMenu() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // Always mount to show actual content (not skeleton)
+    console.log('🔵 UserMenu mounted, auth state:', { user: user?.email, loading, isAuthenticated })
     setMounted(true)
-  }, [])
+  }, [user, loading, isAuthenticated])
 
   const handleLogout = async () => {
     await logout()
@@ -55,8 +57,9 @@ export function UserMenu() {
 
   const cartCount = getItemCount()
 
-  // Only show loading skeleton after component is mounted
-  if (!mounted || loading) {
+  // Only show loading skeleton during initial mount
+  // But continue showing content if auth is still loading but user data exists
+  if (!mounted) {
     return (
       <div className="flex items-center gap-2">
         {/* Cart skeleton */}
@@ -71,7 +74,7 @@ export function UserMenu() {
   }
 
   // Not authenticated - show login button
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return (
       <div className="flex items-center gap-2">
         {/* Cart (always visible for non-logged in users) */}
