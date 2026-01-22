@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useCart } from "./cart-context";
 import { AuthModal } from "../auth/auth-modal";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { useRouter, useSearchParams } from "next/navigation";
 import {

@@ -239,6 +239,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       logger.log("🚪 Signing out...")
+      
+      // First, call the server logout endpoint to clear all cookies
+      const logoutResponse = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (!logoutResponse.ok) {
+        logger.warn("⚠️ Server logout failed, clearing client state anyway")
+      }
+
+      // Then sign out from client
       const { error } = await supabase.auth.signOut()
 
       if (error) {
@@ -246,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error
       }
 
-      logger.log("✅ Successfully signed out")
+      logger.log("✅ Successfully signed out from server and client")
       // State will be cleared by onAuthStateChange listener
     } catch (error) {
       logger.error("❌ Logout error:", error)

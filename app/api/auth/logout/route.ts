@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/auth/logout
- * Sign out the current user and clear session cookies
+ * Sign out the current user and clear all session cookies
+ * Works in both localhost and deployed versions
  */
 export async function POST(request: NextRequest) {
   try {
@@ -30,19 +31,47 @@ export async function POST(request: NextRequest) {
     // Remove any other auth-related cookies
     cookieStore.delete('sb_jwt_token')
     cookieStore.delete('sb_provider_token')
-
-    console.log('✅ User logged out and cookies cleared')
+    cookieStore.delete('sb-idp-nonce')
 
     const response = NextResponse.json({
       success: true,
       message: 'Logged out successfully',
     })
 
-    // Also set Max-Age=0 to ensure browser deletes them
-    response.cookies.delete('sb-access-token')
-    response.cookies.delete('sb-refresh-token')
-    response.cookies.delete('sb_jwt_token')
-    response.cookies.delete('sb_provider_token')
+    // Set Max-Age=0 and clear all auth cookies from response
+    // This ensures cookies are deleted in production (deployed version)
+    response.cookies.set('sb-access-token', '', {
+      maxAge: 0,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    })
+    response.cookies.set('sb-refresh-token', '', {
+      maxAge: 0,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    })
+    response.cookies.set('sb_jwt_token', '', {
+      maxAge: 0,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    })
+    response.cookies.set('sb_provider_token', '', {
+      maxAge: 0,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    })
+    response.cookies.set('sb-idp-nonce', '', {
+      maxAge: 0,
+      path: '/',
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    })
+
+    console.log('✅ User logged out and all cookies cleared')
 
     return response
 

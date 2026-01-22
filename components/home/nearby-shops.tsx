@@ -4,6 +4,8 @@ import { Star, Clock, MapPin, Award, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+
 interface Shop {
   id: string
   name: string
@@ -12,13 +14,19 @@ interface Shop {
   deliveryTime: number
   deliveryFee: number
   distance: number
-  image?: string
+  photo?: string
   isOpen?: boolean
   discount?: number
 }
 
 interface NearbyShopsProps {
   shops: Shop[]
+}
+
+// Helper function to get shop image URL from Supabase storage
+const getShopImageUrl = (photo: string | undefined): string | null => {
+  if (!photo || !SUPABASE_URL) return null
+  return `${SUPABASE_URL}/storage/v1/object/public/shop-images/${photo}`
 }
 
 export function NearbyShops({ shops }: NearbyShopsProps) {
@@ -50,9 +58,23 @@ export function NearbyShops({ shops }: NearbyShopsProps) {
                     <div className="relative h-52 overflow-hidden bg-slate-100">
                       {/* Image with overlay effect */}
                       <div className="relative h-full w-full bg-slate-50 group-hover:scale-105 transition-transform duration-300">
-                        <div className="absolute inset-0 flex items-center justify-center text-6xl">
-                          🏪
-                        </div>
+                        {getShopImageUrl(shop.photo) ? (
+                          <img
+                            src={getShopImageUrl(shop.photo)!}
+                            alt={shop.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                            }}
+                          />
+                        ) : null}
+                        {/* Fallback emoji if no photo */}
+                        {!getShopImageUrl(shop.photo) && (
+                          <div className="absolute inset-0 flex items-center justify-center text-6xl">
+                            🏪
+                          </div>
+                        )}
                       </div>
 
                       {/* Closed overlay */}
