@@ -45,60 +45,58 @@ export default function ShopDetailPage() {
   }
 
   return (
-    <main className="min-h-dvh bg-background pb-4">
-      <div className="relative">
-        <div className="h-48 bg-gradient-to-br from-primary/20 to-accent/10">
-          {shop.photo && (
-            <img src={shop.photo || "/placeholder.svg"} alt={shop.name} className="h-full w-full object-cover" />
-          )}
-        </div>
-        <Link
-          href="/shops"
-          className="absolute top-4 left-4 h-10 w-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-lg"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full fresh-badge text-sm font-semibold flex items-center gap-1">
-          <Clock className="h-4 w-4" />9 min
+    <main className="min-h-dvh bg-white">
+      {/* Shop header with background */}
+      <div className="bg-gradient-to-b from-slate-900 to-slate-800 text-white">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          {/* Back button */}
+          <div className="h-16 flex items-center">
+            <Link
+              href="/shops"
+              className="inline-flex items-center justify-center h-10 w-10 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </div>
+
+          {/* Shop name and quick info */}
+          <div className="pb-8">
+            <h1 className="text-4xl font-extrabold mb-3">{shop.name}</h1>
+            <p className="text-slate-300 text-lg mb-4">{shop.shop_type || "General Store"}</p>
+
+            {/* Quick info badges */}
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-1 bg-white/15 backdrop-blur px-3 py-2 rounded-lg">
+                <Clock className="h-4 w-4" />
+                <span>Delivers in 9 min</span>
+              </div>
+              <div className="flex items-center gap-1 bg-white/15 backdrop-blur px-3 py-2 rounded-lg">
+                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                <span>4.5 Rating</span>
+              </div>
+              {shop.address && (
+                <div className="flex items-center gap-1 bg-white/15 backdrop-blur px-3 py-2 rounded-lg">
+                  <MapPin className="h-4 w-4" />
+                  <span>{shop.address}</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Shop info */}
-      <div className="mx-auto max-w-5xl px-4 -mt-8 relative z-10">
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-lg">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-extrabold">{shop.name}</h1>
-              <p className="text-muted-foreground">{shop.shop_type || "General Store"}</p>
-            </div>
-            <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-secondary text-sm font-semibold">
-              <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-              4.5
-            </div>
+      {/* Products section */}
+      <div className="bg-white">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
+          {/* Section header */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Shop Products</h2>
           </div>
 
-          <div className="flex flex-wrap gap-4 mt-4 text-sm text-muted-foreground">
-            {shop.address && (
-              <div className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                <span>{shop.address}</span>
-              </div>
-            )}
-            {shop.shop_contact && (
-              <div className="flex items-center gap-1">
-                <Phone className="h-4 w-4" />
-                <span>{shop.shop_contact}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Products */}
-        <div className="mt-6">
-          <h2 className="text-lg font-bold mb-4">Products</h2>
+          {/* Products grid */}
           <CartProvider>
             <ProductList shopId={shopId} />
-            <Suspense fallback={<div>Loading checkout...</div>}>
+            <Suspense fallback={<div className="text-center py-8 text-slate-600">Loading checkout...</div>}>
               <CartCheckout shopId={shopId} shopLat={shop.lat || 0} shopLng={shop.lng || 0} />
             </Suspense>
           </CartProvider>

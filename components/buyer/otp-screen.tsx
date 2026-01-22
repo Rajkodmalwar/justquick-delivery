@@ -1,5 +1,7 @@
 "use client"
 
+
+import { logger } from '@/lib/logger'
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -133,7 +135,7 @@ export function OtpScreen({ phone, onSuccess, onError }: OtpScreenProps) {
       }
 
     } catch (err: any) {
-      console.error("OTP verification error:", err)
+      logger.error("OTP verification error:", err)
       onError(err.message || "Invalid OTP. Please try again.")
     } finally {
       setLoading(false)

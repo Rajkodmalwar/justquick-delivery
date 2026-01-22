@@ -42,13 +42,16 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const checkAdminSession = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      // Check if session exists first
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (error || !user || user.user_metadata?.role !== "admin") {
+      // No session = not logged in = redirect to login
+      if (!session?.user) {
         router.push("/admin/login");
         return;
       }
       
+      // Session exists, allow access (middleware already verified admin role)
       setIsAdmin(true);
     };
 
@@ -56,7 +59,7 @@ export default function AdminDashboard() {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT" || session?.user?.user_metadata?.role !== "admin") {
+      if (event === "SIGNED_OUT" || !session?.user) {
         setIsAdmin(false);
         router.push("/admin/login");
       }

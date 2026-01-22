@@ -92,44 +92,41 @@ export function ProductList({ shopId }: { shopId: string }) {
 
   return (
     <>
-      {/* Search and Filter Bar */}
-      <div className="flex gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Search Bar */}
+      <div className="mb-8">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
           <Input
             type="text"
-            placeholder="Search products..."
+            placeholder="Search products in this shop..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-12 rounded-xl bg-card border-border"
+            className="pl-12 h-12 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-500 focus:border-emerald-400 focus:ring-emerald-400"
           />
         </div>
-        <button className="h-12 w-12 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-secondary transition-colors">
-          <SlidersHorizontal className="h-4 w-4" />
-        </button>
       </div>
 
       {/* Products Count */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex items-center justify-between mb-6">
+        <p className="text-sm font-medium text-slate-700">
           {availableProducts.length} product{availableProducts.length !== 1 ? "s" : ""} available
           {unavailableProducts.length > 0 && (
-            <span className="text-destructive ml-2">({unavailableProducts.length} out of stock)</span>
+            <span className="text-red-500 ml-2">({unavailableProducts.length} out of stock)</span>
           )}
         </p>
       </div>
 
       {/* Products Grid */}
       {filteredProducts.length === 0 ? (
-        <div className="text-center py-12 rounded-2xl bg-card border border-border">
-          <Search className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-          <h3 className="font-semibold mb-1">No products found</h3>
-          <p className="text-sm text-muted-foreground">Try a different search term</p>
+        <div className="text-center py-16 rounded-xl bg-slate-50 border border-slate-200">
+          <Search className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+          <h3 className="font-semibold text-slate-900 mb-1">No products found</h3>
+          <p className="text-sm text-slate-600">Try a different search term</p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-10">
           {availableProducts.length > 0 && (
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {availableProducts.map((p: Product) => (
                 <ProductCard
                   key={p.id}
@@ -148,12 +145,12 @@ export function ProductList({ shopId }: { shopId: string }) {
 
           {unavailableProducts.length > 0 && (
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
-                <span className="h-px flex-1 bg-border" />
-                Currently Unavailable
-                <span className="h-px flex-1 bg-border" />
+              <h3 className="text-sm font-semibold text-slate-600 mb-6 flex items-center gap-3">
+                <span className="h-px flex-1 bg-slate-200" />
+                Out of Stock
+                <span className="h-px flex-1 bg-slate-200" />
               </h3>
-              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid gap-5 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 opacity-60">
                 {unavailableProducts.map((p: Product) => (
                   <ProductCard
                     key={p.id}

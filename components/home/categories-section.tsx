@@ -15,17 +15,17 @@ const categories = [
 
 export function CategoriesSection() {
   return (
-    <section className="relative py-20 md:py-32 border-b border-slate-800/50">
+    <section className="relative py-20 md:py-32 border-b border-slate-200 bg-white">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-12 gap-4">
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Shop by Category</h2>
-            <p className="text-slate-400">Everything you need, one tap away</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">Shop by Category</h2>
+            <p className="text-slate-600">Everything you need, one tap away</p>
           </div>
           <Link 
             href="/shops" 
-            className="hidden md:flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
+            className="hidden md:flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
           >
             View all
             <ArrowRight className="h-4 w-4" />
@@ -42,11 +42,11 @@ export function CategoriesSection() {
                 href={`/shops?category=${category.name.toLowerCase()}`}
                 className="group"
               >
-                <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-slate-700/50 backdrop-blur p-6 text-center hover:from-slate-700/50 hover:to-slate-800/50 hover:border-cyan-500/30 transition-all duration-300 cursor-pointer h-full flex flex-col items-center justify-center gap-3">
-                  <div className={`p-3 rounded-lg bg-slate-700/50 ${category.color} group-hover:scale-110 transition-transform duration-300`}>
+                <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300 cursor-pointer h-full flex flex-col items-center justify-center gap-3 p-6">
+                  <div className={`p-3 rounded-lg bg-slate-100 ${category.color} group-hover:scale-110 transition-transform duration-300`}>
                     <Icon className="h-6 w-6" />
                   </div>
-                  <h3 className="font-semibold text-sm text-white">{category.name}</h3>
+                  <h3 className="font-semibold text-sm text-slate-900">{category.name}</h3>
                 </Card>
               </Link>
             )
@@ -57,7 +57,7 @@ export function CategoriesSection() {
         <div className="md:hidden mt-8 flex justify-center">
           <Link 
             href="/shops" 
-            className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
           >
             View all
             <ArrowRight className="h-4 w-4" />

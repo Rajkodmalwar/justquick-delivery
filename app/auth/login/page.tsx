@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { logger } from "@/lib/logger"
 import { Mail, Loader2, ArrowRight, UserPlus, CheckCircle, KeyRound } from "lucide-react"
 import Link from "next/link"
 
@@ -43,7 +44,7 @@ export default function LoginPage() {
     setError("")
 
     try {
-      console.log("📧 Sending OTP to:", email)
+      logger.log("📧 Sending OTP to:", email)
       
       const response = await fetch("/api/auth/send-otp", {
         method: "POST",
@@ -57,11 +58,11 @@ export default function LoginPage() {
         throw new Error(data.error || "Failed to send OTP")
       }
 
-      console.log("✅ OTP sent successfully")
+      logger.log("✅ OTP sent successfully")
       setStep('otp')
 
     } catch (err: any) {
-      console.error("❌ Send OTP error:", err)
+      logger.error("❌ Send OTP error:", err)
       setError(err.message || "Failed to send OTP. Please try again.")
     } finally {
       setLoading(false)
@@ -81,7 +82,7 @@ export default function LoginPage() {
     setError("")
 
     try {
-      console.log("🔐 Verifying OTP...")
+      logger.log("🔐 Verifying OTP...")
       
       const response = await fetch("/api/auth/verify-otp", {
         method: "POST",
@@ -99,13 +100,13 @@ export default function LoginPage() {
         throw new Error(data.error || "Failed to verify OTP")
       }
 
-      console.log("✅ OTP verified, logging in...")
+      logger.log("✅ OTP verified, logging in...")
       // Session is automatically set in cookies by the middleware
       // Redirect to shops
       router.push("/shops")
 
     } catch (err: any) {
-      console.error("❌ Verify OTP error:", err)
+      logger.error("❌ Verify OTP error:", err)
       setError(err.message || "Invalid or expired OTP code")
     } finally {
       setLoading(false)
@@ -115,20 +116,33 @@ export default function LoginPage() {
   // OTP verification step
   if (step === 'otp') {
     return (
-      <main className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900">
-        <div className="w-full max-w-md">
-          <Card className="border-slate-700/50 bg-slate-900/50">
-            <CardHeader className="text-center">
-              <KeyRound className="h-16 w-16 text-cyan-400 mx-auto mb-4" />
-              <CardTitle className="text-2xl">Enter OTP Code</CardTitle>
-              <p className="text-slate-400 mt-2">Check your email</p>
-              <p className="font-semibold text-cyan-400 text-sm mt-1">{email}</p>
+      <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-white via-slate-50 to-slate-100">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-50 rounded-full blur-3xl opacity-40" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-50 rounded-full blur-3xl opacity-30" />
+        </div>
+
+        <div className="w-full max-w-sm relative z-10">
+          {/* Logo/Brand */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 mb-4">
+              <span className="text-white font-bold text-lg">Q</span>
+            </div>
+          </div>
+
+          <Card className="border-slate-200/50 bg-white/95 backdrop-blur-sm shadow-lg">
+            <CardHeader className="text-center pb-6">
+              <KeyRound className="h-12 w-12 text-emerald-600 mx-auto mb-4" />
+              <CardTitle className="text-2xl text-slate-900">Verify Your Email</CardTitle>
+              <p className="text-slate-600 mt-2 text-sm">We sent a code to</p>
+              <p className="font-semibold text-emerald-600 text-sm mt-1 break-all">{email}</p>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-5">
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-200">
-                    OTP Code (6 digits)
+                  <label className="block text-sm font-medium text-slate-700">
+                    6-Digit Code
                   </label>
                   <Input
                     type="text"
@@ -140,12 +154,12 @@ export default function LoginPage() {
                     }}
                     maxLength="6"
                     disabled={loading}
-                    className="text-center text-2xl tracking-widest bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 disabled:opacity-50"
+                    className="text-center text-3xl tracking-widest bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 disabled:opacity-50 font-semibold"
                   />
                 </div>
 
                 {error && (
-                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
                     {error}
                   </div>
                 )}
@@ -153,7 +167,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   disabled={loading || otp.length !== 6}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-medium disabled:opacity-50"
+                  className="w-full h-12 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold disabled:opacity-50 transition-all duration-200"
                 >
                   {loading ? (
                     <>
@@ -169,8 +183,8 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="space-y-3">
-                <p className="text-sm text-slate-400 text-center">
+              <div className="space-y-3 pt-2">
+                <p className="text-sm text-slate-600 text-center">
                   Didn't receive the code?
                 </p>
                 <Button
@@ -180,15 +194,14 @@ export default function LoginPage() {
                     setError("")
                   }}
                   variant="outline"
-                  className="w-full border-slate-700/50 text-slate-300 hover:bg-slate-800/50"
+                  className="w-full border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                 >
-                  <ArrowRight className="h-4 w-4 mr-2" />
                   Try Another Email
                 </Button>
               </div>
 
               <p className="text-center text-xs text-slate-500">
-                OTP expires in 10 minutes
+                Code expires in 10 minutes
               </p>
             </CardContent>
           </Card>
@@ -199,25 +212,36 @@ export default function LoginPage() {
 
   // Email entry step
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900">
-      <div className="w-full max-w-md">
-        <Card className="border-slate-700/50 bg-slate-900/50">
-          <CardHeader className="text-center space-y-2">
-            <CardTitle className="text-3xl bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-              Welcome Back
-            </CardTitle>
-            <p className="text-slate-400">Sign in with OTP</p>
+    <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-white via-slate-50 to-slate-100">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-50 rounded-full blur-3xl opacity-40" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-50 rounded-full blur-3xl opacity-30" />
+      </div>
+
+      <div className="w-full max-w-sm relative z-10">
+        {/* Logo/Brand */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 mb-4">
+            <span className="text-white font-bold text-lg">Q</span>
+          </div>
+        </div>
+
+        <Card className="border-slate-200/50 bg-white/95 backdrop-blur-sm shadow-lg">
+          <CardHeader className="text-center pb-8">
+            <CardTitle className="text-3xl text-slate-900">Welcome Back</CardTitle>
+            <p className="text-slate-600 mt-2">Fast, safe delivery at your doorstep</p>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSendOtp} className="space-y-6">
               {/* Email */}
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">
+                <label className="text-sm font-semibold text-slate-700 mb-2 block">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <Input
                     type="email"
                     placeholder="you@example.com"
@@ -227,13 +251,13 @@ export default function LoginPage() {
                       setError("")
                     }}
                     disabled={loading}
-                    className="pl-10 bg-slate-800/50 border-slate-700/50 text-slate-100 placeholder:text-slate-500 disabled:opacity-50"
+                    className="pl-11 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 disabled:opacity-50 h-11 rounded-lg"
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
                   {error}
                 </div>
               )}
@@ -241,40 +265,49 @@ export default function LoginPage() {
               {/* Send OTP Button */}
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-medium disabled:opacity-50"
+                className="w-full h-12 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold disabled:opacity-50 transition-all duration-200 rounded-lg"
                 disabled={loading || !email}
               >
                 {loading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
                     Sending...
                   </>
                 ) : (
                   <>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Send OTP Code
+                    <Mail className="h-5 w-5 mr-2" />
+                    Send Login Code
                   </>
                 )}
               </Button>
             </form>
 
-            <div className="mt-6 space-y-3">
-              <p className="text-center text-sm text-slate-400">
-                Don't have an account?
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-slate-500">or</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-center text-sm text-slate-600">
+                New to JustQuick?
               </p>
               <Link href="/auth/register">
                 <Button
                   variant="outline"
-                  className="w-full border-slate-700/50 text-slate-300 hover:bg-slate-800/50 hover:text-slate-100"
+                  className="w-full h-11 border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-semibold rounded-lg"
                 >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Create New Account
+                  <UserPlus className="h-5 w-5 mr-2" />
+                  Create Account
                 </Button>
               </Link>
             </div>
 
             <p className="text-center text-xs text-slate-500 mt-6">
-              By continuing, you agree to our Terms of Service & Privacy Policy
+              By continuing, you agree to our Terms & Privacy Policy
             </p>
           </CardContent>
         </Card>

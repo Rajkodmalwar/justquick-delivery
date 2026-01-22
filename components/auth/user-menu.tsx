@@ -1,6 +1,8 @@
 // components/UserMenu.tsx
 "use client"
 
+
+import { logger } from '@/lib/logger'
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -45,7 +47,7 @@ export function UserMenu() {
 
   useEffect(() => {
     // Always mount to show actual content (not skeleton)
-    console.log('🔵 UserMenu mounted, auth state:', { user: user?.email, loading, isAuthenticated })
+    logger.log('🔵 UserMenu mounted, auth state:', { user: user?.email, loading, isAuthenticated })
     setMounted(true)
   }, [user, loading, isAuthenticated])
 

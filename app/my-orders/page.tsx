@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/components/buyer/cart-context"
+import { logger } from "@/lib/logger"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -19,12 +20,12 @@ import {
 } from "lucide-react"
 
 const statusConfig = {
-  pending: { icon: Clock, color: "text-yellow-600", bg: "bg-yellow-500/10", label: "Pending" },
-  accepted: { icon: Clock, color: "text-blue-600", bg: "bg-blue-500/10", label: "Accepted" },
-  ready: { icon: Store, color: "text-purple-600", bg: "bg-purple-500/10", label: "Ready" },
-  picked_up: { icon: Truck, color: "text-orange-600", bg: "bg-orange-500/10", label: "On the Way" },
-  delivered: { icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-500/10", label: "Delivered" },
-  rejected: { icon: XCircle, color: "text-red-600", bg: "bg-red-500/10", label: "Rejected" },
+  pending: { icon: Clock, color: "text-amber-600", bgColor: "bg-amber-100 border-amber-200", label: "Pending" },
+  accepted: { icon: CheckCircle, color: "text-blue-600", bgColor: "bg-blue-100 border-blue-200", label: "Accepted" },
+  ready: { icon: Store, color: "text-purple-600", bgColor: "bg-purple-100 border-purple-200", label: "Ready" },
+  picked_up: { icon: Truck, color: "text-orange-600", bgColor: "bg-orange-100 border-orange-200", label: "On the Way" },
+  delivered: { icon: CheckCircle, color: "text-emerald-600", bgColor: "bg-emerald-100 border-emerald-200", label: "Delivered" },
+  rejected: { icon: XCircle, color: "text-red-600", bgColor: "bg-red-100 border-red-200", label: "Rejected" },
 }
 
 export default function MyOrdersPage() {
@@ -59,11 +60,11 @@ export default function MyOrdersPage() {
       }
       
       const data = await res.json()
-      console.log("Orders API response:", data) // Debug log
+      logger.log("Orders API response:", data) // Debug log
       
       setOrders(data.orders || [])
     } catch (error: any) {
-      console.error("Error fetching orders:", error)
+      logger.error("Error fetching orders:", error)
       setError(error.message || "Failed to load orders")
       setOrders([])
     } finally {
@@ -73,12 +74,12 @@ export default function MyOrdersPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen px-4 py-8">
+      <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 px-4 py-8">
         <div className="mx-auto max-w-4xl">
           <div className="animate-pulse space-y-4">
-            <div className="h-10 bg-secondary rounded w-1/4"></div>
+            <div className="h-10 bg-slate-200 rounded w-1/4"></div>
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-32 bg-secondary rounded-xl"></div>
+              <div key={i} className="h-24 bg-white rounded-2xl border border-slate-200"></div>
             ))}
           </div>
         </div>
@@ -88,12 +89,12 @@ export default function MyOrdersPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen px-4 py-8">
+      <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 px-4 py-8">
         <div className="mx-auto max-w-4xl">
           <div className="animate-pulse space-y-4">
-            <div className="h-10 bg-secondary rounded w-1/4"></div>
+            <div className="h-10 bg-slate-200 rounded w-1/4"></div>
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-32 bg-secondary rounded-xl"></div>
+              <div key={i} className="h-24 bg-white rounded-2xl border border-slate-200"></div>
             ))}
           </div>
         </div>
@@ -102,85 +103,71 @@ export default function MyOrdersPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-secondary/30 px-4 py-8">
+    <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 px-4 py-8">
       <div className="mx-auto max-w-4xl">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">My Orders</h1>
-            <p className="text-muted-foreground">Track your recent purchases</p>
-          </div>
-          <div className="flex gap-3">
-            <Link href="/shops">
-              <Button variant="outline" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Shopping
-              </Button>
-            </Link>
-          </div>
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">My Orders</h1>
+          <p className="text-slate-600">Track your recent purchases and delivery status</p>
         </div>
 
+        {/* Error State */}
         {error && (
-          <Card className="border-destructive/50 bg-destructive/10 mb-6">
-            <CardContent className="py-4">
-              <div className="flex items-center gap-3">
-                <XCircle className="h-5 w-5 text-destructive" />
-                <div>
-                  <p className="font-medium text-destructive">Failed to load orders</p>
-                  <p className="text-sm text-muted-foreground">{error}</p>
-                </div>
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-red-900">Failed to load orders</p>
+                <p className="text-sm text-red-700 mt-0.5">{error}</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
+        {/* Empty State */}
         {orders.length === 0 && !error ? (
-          <Card className="border-border">
-            <CardContent className="py-16 text-center">
-              <ShoppingBag className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-xl font-bold mb-2">No orders yet</h3>
-              <p className="text-muted-foreground mb-6">Start shopping to see your orders here</p>
-              <Link href="/shops">
-                <Button>Browse Shops</Button>
-              </Link>
-            </CardContent>
-          </Card>
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-12 text-center">
+            <ShoppingBag className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+            <h3 className="text-xl font-bold text-slate-900 mb-2">No orders yet</h3>
+            <p className="text-slate-600 mb-6">Start shopping to see your orders here</p>
+            <Link href="/shops">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white px-8">Browse Shops</Button>
+            </Link>
+          </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {orders.map((order) => {
               const statusInfo = statusConfig[order.status as keyof typeof statusConfig] || statusConfig.pending
               const StatusIcon = statusInfo.icon
               
-              // FIXED: Handle missing products field safely
-              // Some orders might have products array, others might not
-              // If it's missing, check if products exists as a property or use 0
+              // Handle missing products field safely
               let itemCount = 0
               if (order.products && Array.isArray(order.products)) {
                 itemCount = order.products.length
               } else if (order.products && typeof order.products === 'object') {
-                // Handle case where products might be stored differently
                 itemCount = Object.keys(order.products).length
               }
               
               return (
                 <Link key={order.id} href={`/orders/${order.id}`}>
-                  <Card className="border-border hover:border-primary/50 transition cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className={`h-10 w-10 rounded-full ${statusInfo.bg} flex items-center justify-center`}>
-                              <StatusIcon className={`h-5 w-5 ${statusInfo.color}`} />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <Badge className={`${statusInfo.bg} ${statusInfo.color} border-0`}>
-                                  {statusInfo.label}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  #{order.id.slice(-8)}
-                                </span>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
+                  <div className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                    <div className="p-5 sm:p-6">
+                      <div className="flex flex-col gap-4">
+                        {/* Top row: Status, ID, Date */}
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            {/* Status Badge */}
+                            <Badge className={`${statusInfo.bgColor} ${statusInfo.color} border text-sm px-3 py-1 flex-shrink-0`}>
+                              <StatusIcon className="h-4 w-4 mr-1 inline" />
+                              {statusInfo.label}
+                            </Badge>
+                            
+                            {/* Order ID and Date */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-slate-900 truncate">
+                                Order #{order.id.slice(-8).toUpperCase()}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-0.5">
                                 {new Date(order.created_at).toLocaleDateString('en-IN', {
                                   weekday: 'short',
                                   day: 'numeric',
@@ -191,27 +178,35 @@ export default function MyOrdersPage() {
                             </div>
                           </div>
                           
-                          <div className="grid grid-cols-2 gap-4 mt-4">
-                            <div>
-                              <p className="text-sm text-muted-foreground">Items</p>
-                              <p className="font-medium">{itemCount} items</p>
-                            </div>
-                            <div>
-                              <p className="text-sm text-muted-foreground">Total</p>
-                              <p className="text-xl font-bold text-primary">
-                                {/* FIXED: Handle missing delivery_cost safely */}
-                                ₹{order.total_price + (order.delivery_cost || 0)}
-                              </p>
-                            </div>
+                          {/* View Details Button */}
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="border-emerald-300 text-emerald-600 hover:bg-emerald-50 flex-shrink-0"
+                          >
+                            View
+                          </Button>
+                        </div>
+
+                        {/* Bottom row: Items count and Total */}
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                          <div className="flex-1">
+                            <p className="text-xs text-slate-500 font-medium">Items</p>
+                            <p className="text-sm font-semibold text-slate-900 mt-0.5">
+                              {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                            </p>
+                          </div>
+                          
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500 font-medium">Total</p>
+                            <p className="text-lg font-bold text-emerald-600 mt-0.5">
+                              ₹{order.total_price + (order.delivery_cost || 0)}
+                            </p>
                           </div>
                         </div>
-                        
-                        <div className="text-right">
-                          <Button variant="outline">View Details</Button>
-                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </Link>
               )
             })}

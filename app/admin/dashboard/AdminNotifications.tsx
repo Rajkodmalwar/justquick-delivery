@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
+import { logger } from "@/lib/logger"
 import { Bell, Send, User, Store, Truck } from "lucide-react"
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json())
@@ -50,7 +51,7 @@ export default function AdminNotifications() {
       mutateNotifications()
       alert(`Notification sent to ${targetType === "all" ? "all users" : targetType + 's'}!`)
     } catch (error) {
-      console.error("Send error:", error)
+      logger.error("Send error:", error)
       alert("Failed to send notification")
     } finally {
       setSending(false)

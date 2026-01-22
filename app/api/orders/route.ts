@@ -31,22 +31,9 @@ export async function POST(request: NextRequest) {
     // ============================================
     // 1. AUTHENTICATION CHECK
     // ============================================
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    if (authError) {
-      console.error("🔴 Auth error:", authError)
-      return NextResponse.json(
-        { 
-          error: "Authentication failed", 
-          details: authError.message,
-          code: "AUTH_ERROR"
-        },
-        { status: 401 }
-      )
-    }
-    
-    if (!user) {
-      console.error("🔴 No user found")
+    if (!session?.user) {
       return NextResponse.json(
         { 
           error: "Authentication required. Please log in.",
@@ -55,7 +42,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       )
     }
-
+    
+    const user = session.user
     console.log("✅ User authenticated:", { id: user.id, email: user.email })
     
     // ============================================

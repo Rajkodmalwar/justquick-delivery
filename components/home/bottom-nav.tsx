@@ -33,7 +33,7 @@ export function BottomNav({
   return (
     <>
       {/* Bottom Navigation Bar - Mobile */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 md:hidden">
         <div className="flex items-center justify-around">
           {navItems.map((item) => (
             <Link
@@ -41,8 +41,8 @@ export function BottomNav({
               href={item.href}
               className={`flex flex-col items-center justify-center py-3 px-4 flex-1 relative transition-colors ${
                 isActive(item.href)
-                  ? "text-cyan-600 dark:text-cyan-400"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300"
+                  ? "text-blue-600"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               <div className="relative">
@@ -76,16 +76,16 @@ export function BottomNav({
         </Button>
 
         {showMenu && (
-          <div className="absolute top-12 right-0 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="absolute top-12 right-0 bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setShowMenu(false)}
-                className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 hover:bg-slate-100 transition-colors ${
                   isActive(item.href)
-                    ? "text-cyan-600 dark:text-cyan-400 bg-slate-50 dark:bg-slate-900"
-                    : "text-slate-700 dark:text-slate-300"
+                    ? "text-blue-600 bg-slate-50"
+                    : "text-slate-700"
                 }`}
               >
                 <item.icon className="h-5 w-5" />

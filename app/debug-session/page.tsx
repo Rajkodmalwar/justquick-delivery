@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { useEffect } from "react";
+import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +14,8 @@ export default function DebugSession() {
 
   useEffect(() => {
     supabase.auth.getSession().then((res) => {
-      console.log("%cSESSION CHECK ↓↓↓", "color: #00f; font-size:18px;");
-      console.log(res);
+      logger.log("%cSESSION CHECK ↓↓↓", "color: #00f; font-size:18px;");
+      logger.log(res);
       alert("SESSION → " + JSON.stringify(res));
     });
   }, []);

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { logger } from "@/lib/logger"
 import { ShoppingCart, Truck, Store, User, MapPin, Package, Clock, IndianRupee, Filter, RefreshCw } from "lucide-react"
 import { supabase } from "@/lib/supabase/client"
 
@@ -49,10 +50,10 @@ export default function AdminOrders({
       if (!error) {
         setOrders(data || [])
       } else {
-        console.error("❌ Orders fetch error:", error)
+        logger.error("❌ Orders fetch error:", error)
       }
     } catch (err) {
-      console.error("❌ fetchOrders error:", err)
+      logger.error("❌ fetchOrders error:", err)
     } finally {
       if (showLoading) {
         setIsLoading(false)
@@ -71,10 +72,10 @@ export default function AdminOrders({
       if (!error) {
         setDeliveryBoys(data || [])
       } else {
-        console.error("❌ Delivery boys fetch error:", error)
+        logger.error("❌ Delivery boys fetch error:", error)
       }
     } catch (err) {
-      console.error("❌ fetchDeliveryBoys error:", err)
+      logger.error("❌ fetchDeliveryBoys error:", err)
     }
   }, [])
 
@@ -107,7 +108,7 @@ export default function AdminOrders({
       await fetchOrders(false)
       await fetchDeliveryBoys()
     } catch (err) {
-      console.error("❌ handleRefresh error:", err)
+      logger.error("❌ handleRefresh error:", err)
     } finally {
       setRefreshing(false)
     }
@@ -134,7 +135,7 @@ export default function AdminOrders({
       await fetchOrders(false)
 
     } catch (error: any) {
-      console.error("❌ acceptOrder error:", error)
+      logger.error("❌ acceptOrder error:", error)
       alert("Failed to accept order")
     } finally {
       setCurrentlyUpdating(null)
@@ -157,7 +158,7 @@ export default function AdminOrders({
       await fetchOrders(false)
 
     } catch (error: any) {
-      console.error("❌ rejectOrder error:", error)
+      logger.error("❌ rejectOrder error:", error)
       alert("Failed to reject order")
     } finally {
       setCurrentlyUpdating(null)
@@ -184,7 +185,7 @@ export default function AdminOrders({
       await fetchOrders(false)
 
     } catch (error: any) {
-      console.error("❌ assignDeliveryBoy error:", error)
+      logger.error("❌ assignDeliveryBoy error:", error)
       alert("Failed to assign delivery boy")
     } finally {
       setCurrentlyUpdating(null)
@@ -208,7 +209,7 @@ export default function AdminOrders({
       await fetchOrders(false)
 
     } catch (error: any) {
-      console.error("❌ markReady error:", error)
+      logger.error("❌ markReady error:", error)
       alert("Failed to mark order as ready")
     } finally {
       setCurrentlyUpdating(null)
@@ -232,7 +233,7 @@ export default function AdminOrders({
       await fetchOrders(false)
 
     } catch (error: any) {
-      console.error("❌ markOutForDelivery error:", error)
+      logger.error("❌ markOutForDelivery error:", error)
       alert("Failed to mark order as out for delivery")
     } finally {
       setCurrentlyUpdating(null)
@@ -256,7 +257,7 @@ export default function AdminOrders({
       await fetchOrders(false)
 
     } catch (error: any) {
-      console.error("❌ markDelivered error:", error)
+      logger.error("❌ markDelivered error:", error)
       alert("Failed to mark order as delivered")
     } finally {
       setCurrentlyUpdating(null)
@@ -289,12 +290,12 @@ export default function AdminOrders({
         throw new Error(result.error || "Auto-assign failed")
       }
 
-      console.log(`✅ Auto-assigned ${result.assigned || 0} orders`)
+      logger.log(`✅ Auto-assigned ${result.assigned || 0} orders`)
       
       await fetchOrders(false)
       
     } catch (error: any) {
-      console.error("💥 Auto-assign error:", error)
+      logger.error("💥 Auto-assign error:", error)
       alert("Failed to auto-assign orders")
     } finally {
       setAutoAssigning(false)

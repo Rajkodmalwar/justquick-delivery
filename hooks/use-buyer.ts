@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase/client"
+import { logger } from "@/lib/logger"
 
 export interface Buyer {
   id: string
@@ -37,7 +38,7 @@ export function useBuyer() {
     // Listen for auth changes - THIS IS WHAT SessionChecker WAS DOING
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log("Auth state changed:", event)
+        logger.log("Auth state changed:", event)
         
         if (session?.user) {
           setBuyer({

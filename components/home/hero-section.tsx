@@ -21,37 +21,29 @@ export function HeroSection({ isAuthenticated, unreadNotifications }: HeroSectio
   }
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-950 dark:to-slate-950 pt-20 pb-32 md:pt-32 md:pb-48 transition-colors duration-200">
-      {/* Animated background grid */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_1px,transparent_calc(100%-1px)),linear-gradient(transparent_1px,transparent_calc(100%-1px))] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_at_center,black_0%,transparent_70%)]" />
-      </div>
-
-      {/* Glow effects */}
-      <div className="absolute -top-40 right-0 w-80 h-80 bg-cyan-500/20 rounded-full blur-3xl opacity-30" />
-      <div className="absolute -bottom-20 left-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl opacity-20" />
-
-<div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <section className="relative overflow-hidden bg-white pt-20 pb-32 md:pt-32 md:pb-48">
+      {/* Content area */}
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           {/* Badge */}
           <div className="mb-8 flex justify-center">
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-800/50 px-4 py-2 border border-slate-200 dark:border-slate-700/50 backdrop-blur-sm">
-              <Zap className="h-4 w-4 text-cyan-400" />
-              <span className="text-sm text-slate-700 dark:text-slate-300">Delivered in 9 minutes</span>
+            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 border border-slate-200">
+              <Zap className="h-4 w-4 text-blue-600" />
+              <span className="text-sm text-slate-700">Delivered in 9 minutes</span>
             </div>
           </div>
 
           {/* Main headline */}
           <h1 className="mb-6 text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight">
-            <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            <span className="text-blue-600">
               Fresh Groceries
             </span>
             <br />
-            <span className="text-slate-900 dark:text-slate-100">In 9 Minutes</span>
+            <span className="text-slate-900">In 9 Minutes</span>
           </h1>
 
           {/* Subheading */}
-          <p className="mx-auto mb-12 max-w-2xl text-lg text-slate-600 dark:text-slate-400">
+          <p className="mx-auto mb-12 max-w-2xl text-lg text-slate-600">
             Order from your neighborhood shops. Get fresh groceries, snacks, and essentials delivered to your doorstep faster than you can say "quick."
           </p>
 
@@ -60,34 +52,33 @@ export function HeroSection({ isAuthenticated, unreadNotifications }: HeroSectio
             <Button
               size="lg"
               onClick={handleOrderNow}
-              className="group relative overflow-hidden"
+              className="group relative overflow-hidden bg-blue-600 hover:bg-blue-700 text-white"
             >
               <span className="relative z-10 flex items-center gap-2">
                 Order Now
                 <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
               </span>
-              <span className="absolute inset-0 bg-gradient-to-r from-cyan-600 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
             </Button>
             <Button
               variant="outline"
               size="lg"
               onClick={() => router.push("/shops")}
-              className="border-slate-300 dark:border-slate-700/50 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+              className="border-slate-300 text-slate-700 hover:bg-slate-100"
             >
               Browse Shops
             </Button>
           </div>
 
           {/* Partner Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pb-8 border-b border-slate-200 dark:border-slate-800/50">
-            <p className="w-full text-sm text-slate-600 dark:text-slate-400 mb-4 sm:mb-0 sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pb-8 border-b border-slate-200">
+            <p className="w-full text-sm text-slate-600 mb-4 sm:mb-0 sm:w-auto">
               Are you a vendor or delivery partner?
             </p>
             <Button
               variant="outline"
               size="sm"
               onClick={() => router.push("/partner/vendor")}
-              className="border-emerald-400/50 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:border-emerald-400 dark:hover:border-emerald-500/50"
+              className="border-emerald-400 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-600"
             >
               Become a Vendor
             </Button>
@@ -95,7 +86,7 @@ export function HeroSection({ isAuthenticated, unreadNotifications }: HeroSectio
               variant="outline"
               size="sm"
               onClick={() => router.push("/partner/driver")}
-              className="border-purple-400/50 dark:border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 hover:border-purple-400 dark:hover:border-purple-500/50"
+              className="border-purple-400 text-purple-600 hover:bg-purple-50 hover:border-purple-600"
             >
               Join as Delivery Partner
             </Button>

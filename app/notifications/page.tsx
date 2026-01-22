@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { logger } from "@/lib/logger";
 import { 
   Bell, 
   CheckCircle, 
@@ -53,7 +54,7 @@ export default function NotificationsPage() {
         setUnreadCount(data.unread_count || 0);
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      logger.error("Error fetching notifications:", error);
     } finally {
       setLoading(false);
     }
@@ -108,7 +109,7 @@ export default function NotificationsPage() {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      logger.error("Error marking notification as read:", error);
     }
   };
 
@@ -127,7 +128,7 @@ export default function NotificationsPage() {
         setUnreadCount(0);
       }
     } catch (error) {
-      console.error("Error marking all as read:", error);
+      logger.error("Error marking all as read:", error);
     }
   };
 

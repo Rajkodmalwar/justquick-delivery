@@ -19,12 +19,12 @@ export function SearchAndLocation({ onSearch }: SearchAndLocationProps) {
   }
 
   return (
-    <section className="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 backdrop-blur-sm bg-opacity-90 dark:bg-opacity-90 py-4">
+    <section className="sticky top-0 z-40 bg-white border-b border-slate-200 py-4">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Location selector */}
-        <div className="mb-4 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+        <div className="mb-4 flex items-center gap-2 text-sm text-slate-600">
           <MapPin className="h-4 w-4" />
-          <select className="bg-transparent text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer">
+          <select className="bg-transparent text-slate-700 focus:outline-none cursor-pointer">
             <option>Current Location</option>
             <option>Set Address</option>
             <option>Saved Addresses</option>
@@ -39,7 +39,7 @@ export function SearchAndLocation({ onSearch }: SearchAndLocationProps) {
             placeholder="Search for shops or items..."
             value={searchQuery}
             onChange={handleSearch}
-            className="pl-10 pr-4 py-2 w-full rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            className="pl-10 pr-4 py-2 w-full rounded-lg border-slate-300 bg-white text-slate-900"
           />
         </div>
       </div>

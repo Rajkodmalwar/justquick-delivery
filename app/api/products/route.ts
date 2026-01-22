@@ -51,15 +51,16 @@ export async function POST(req: Request) {
   try {
     // Step 1: Check if user is admin
     const supabaseUser = await getSupabaseServer();
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    const { data: { session } } = await supabaseUser.auth.getSession();
     
-    if (authError || !user || user.user_metadata?.role !== "admin") {
+    if (!session?.user || session.user.user_metadata?.role !== "admin") {
       return NextResponse.json({ 
         error: "Access denied: Admin only", 
         details: "You must be logged in as admin to add products"
       }, { status: 403 });
     }
 
+    const user = session.user
     console.log("✅ Admin authenticated:", user.email);
 
     // Step 2: Parse request
@@ -84,8 +85,6 @@ export async function POST(req: Request) {
       name: body.name,
       price: body.price,
       is_available: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     };
     
     // Only add photo if it has a value
@@ -133,15 +132,16 @@ export async function PATCH(req: Request) {
   try {
     // Step 1: Check if user is admin
     const supabaseUser = await getSupabaseServer();
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    const { data: { session } } = await supabaseUser.auth.getSession();
     
-    if (authError || !user || user.user_metadata?.role !== "admin") {
+    if (!session?.user || session.user.user_metadata?.role !== "admin") {
       return NextResponse.json({ 
         error: "Access denied: Admin only",
         details: "You must be logged in as admin to update products"
       }, { status: 403 });
     }
 
+    const user = session.user
     console.log("✅ Admin authenticated:", user.email);
 
     // Step 2: Parse request
@@ -195,15 +195,16 @@ export async function DELETE(req: Request) {
   try {
     // Step 1: Check if user is admin
     const supabaseUser = await getSupabaseServer();
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    const { data: { session } } = await supabaseUser.auth.getSession();
     
-    if (authError || !user || user.user_metadata?.role !== "admin") {
+    if (!session?.user || session.user.user_metadata?.role !== "admin") {
       return NextResponse.json({ 
         error: "Access denied: Admin only",
         details: "You must be logged in as admin to delete products"
       }, { status: 403 });
     }
 
+    const user = session.user
     console.log("✅ Admin authenticated:", user.email);
 
     // Step 2: Get product ID from query params

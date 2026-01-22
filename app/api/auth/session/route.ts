@@ -12,15 +12,17 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await getSupabaseServer()
     
-    // Get user from server (reads cookies set by middleware)
-    const { data: { user }, error } = await supabase.auth.getUser()
+    // First check if session exists (no session = guest user, not an error)
+    const { data: { session } } = await supabase.auth.getSession()
     
-    if (error || !user) {
+    if (!session) {
       return NextResponse.json(
         { user: null },
         { status: 200 }
       )
     }
+    
+    const user = session.user
 
     // Get profile if exists
     let profile = null
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
     }, { status: 200 })
     
   } catch (error: any) {
-    console.error('❌ Session error:', error)
+    // Unexpected errors only - return null user silently
     return NextResponse.json(
       { user: null },
       { status: 200 }

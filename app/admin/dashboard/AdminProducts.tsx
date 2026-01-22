@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { logger } from "@/lib/logger"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ImageUpload } from "@/components/ui/image-upload"
 import { Package, Plus, Trash2, Store, Loader2 } from "lucide-react"
@@ -26,7 +27,7 @@ function AdminProducts() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      console.log("🔄 Sending product data:", {
+      logger.log("🔄 Sending product data:", {
         shop_id: shopId,
         name,
         price: Number(price),
@@ -44,7 +45,7 @@ function AdminProducts() {
         }),
       });
 
-      console.log("📨 API Response status:", res.status);
+      logger.log("📨 API Response status:", res.status);
 
       let result: any = {};
       const contentType = res.headers.get("content-type");
@@ -53,15 +54,15 @@ function AdminProducts() {
         result = await res.json();
       } else {
         const text = await res.text();
-        console.warn("⚠️ Non-JSON response:", text);
+        logger.warn("⚠️ Non-JSON response:", text);
         result = { error: text || `HTTP ${res.status}` };
       }
 
-      console.log("📨 API Response data:", result);
+      logger.log("📨 API Response data:", result);
 
       if (!res.ok) {
         const errorMsg = result?.error || result?.message || result?.details || `HTTP ${res.status}`;
-        console.error("❌ API Error:", errorMsg);
+        logger.error("❌ API Error:", errorMsg);
         alert("Failed to add product: " + errorMsg);
       } else {
         setName("");
@@ -71,7 +72,7 @@ function AdminProducts() {
         alert("✅ Product added successfully!");
       }
     } catch (err: any) {
-      console.error("💥 Fetch error:", err);
+      logger.error("💥 Fetch error:", err);
       alert("Failed to add product: " + err.message);
     } finally {
       setSubmitting(false);

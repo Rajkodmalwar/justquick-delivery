@@ -55,7 +55,7 @@ export default function NotificationBell({ userId, userRole }: NotificationBellP
         setUnreadCount(data.unread_count || 0);
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      logger.error("Error fetching notifications:", error);
     } finally {
       setLoading(false);
     }
@@ -160,7 +160,7 @@ export default function NotificationBell({ userId, userRole }: NotificationBellP
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      logger.error("Error marking notification as read:", error);
     }
   };
 
@@ -179,7 +179,7 @@ export default function NotificationBell({ userId, userRole }: NotificationBellP
         setUnreadCount(0);
       }
     } catch (error) {
-      console.error("Error marking all as read:", error);
+      logger.error("Error marking all as read:", error);
     }
   };
 

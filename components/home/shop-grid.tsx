@@ -32,11 +32,11 @@ export function ShopGrid({ shops, title = "Featured Shops", viewAllLink }: ShopG
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
             {title}
           </h2>
           {viewAllLink && (
-            <Link href={viewAllLink} className="flex items-center gap-2 text-cyan-600 dark:text-cyan-400 hover:underline font-semibold">
+            <Link href={viewAllLink} className="flex items-center gap-2 text-emerald-600 hover:underline font-semibold">
               View All <ArrowRight className="h-4 w-4" />
             </Link>
           )}
@@ -46,9 +46,9 @@ export function ShopGrid({ shops, title = "Featured Shops", viewAllLink }: ShopG
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {shops.map((shop) => (
             <Link key={shop.id} href={`/shops/${shop.id}`}>
-              <Card className="h-full hover:shadow-lg dark:hover:shadow-cyan-500/10 transition-all duration-300 cursor-pointer border-slate-200 dark:border-slate-800 overflow-hidden">
+              <Card className="h-full hover:border-emerald-200 transition-colors cursor-pointer border-slate-200 overflow-hidden">
                 {/* Image with badges */}
-                <div className="relative h-40 bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                <div className="relative h-40 bg-slate-100 overflow-hidden">
                   {shop.image && (
                     <Image
                       src={shop.image}
@@ -58,16 +58,16 @@ export function ShopGrid({ shops, title = "Featured Shops", viewAllLink }: ShopG
                     />
                   )}
                   {shop.discount && (
-                    <Badge className="absolute top-3 right-3 bg-red-500 hover:bg-red-600">
+                    <Badge className="absolute top-3 right-3 bg-red-500 text-white">
                       {shop.discount}% OFF
                     </Badge>
                   )}
                   {shop.isFavorite && (
-                    <Badge className="absolute top-3 left-3 bg-pink-500 hover:bg-pink-600">
+                    <Badge className="absolute top-3 left-3 bg-pink-500 text-white">
                       ❤️ Favorite
                     </Badge>
                   )}
-                  <Badge className="absolute bottom-3 right-3 bg-cyan-500 hover:bg-cyan-600 flex items-center gap-1">
+                  <Badge className="absolute bottom-3 right-3 bg-emerald-600 text-white flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {shop.deliveryTime} min
                   </Badge>
@@ -76,10 +76,10 @@ export function ShopGrid({ shops, title = "Featured Shops", viewAllLink }: ShopG
                 {/* Content */}
                 <CardHeader className="pb-3">
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white line-clamp-1">
+                    <h3 className="text-lg font-semibold text-slate-900 line-clamp-1">
                       {shop.name}
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-1">
+                    <p className="text-sm text-slate-600 line-clamp-1">
                       {shop.category}
                     </p>
                   </div>
@@ -90,18 +90,18 @@ export function ShopGrid({ shops, title = "Featured Shops", viewAllLink }: ShopG
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-semibold text-slate-900 dark:text-white">{shop.rating}</span>
+                      <span className="font-semibold text-slate-900">{shop.rating}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
+                    <div className="flex items-center gap-1 text-slate-600">
                       <MapPin className="h-4 w-4" />
                       <span>{shop.distance} km away</span>
                     </div>
                   </div>
 
                   {/* Delivery Fee */}
-                  <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 py-2 border-t border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center justify-between text-sm text-slate-600 py-2 border-t border-slate-200">
                     <span>Delivery Fee</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">
+                    <span className="font-semibold text-slate-900">
                       ${shop.deliveryFee}
                     </span>
                   </div>
@@ -109,7 +109,7 @@ export function ShopGrid({ shops, title = "Featured Shops", viewAllLink }: ShopG
                   {/* Quick Order Button */}
                   <Button
                     size="sm"
-                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 gap-2"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
                   >
                     <ShoppingCart className="h-4 w-4" />
                     View Products

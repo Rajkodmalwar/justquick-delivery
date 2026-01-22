@@ -23,19 +23,19 @@ interface RecentOrdersProps {
 export function RecentOrders({ orders, isAuthenticated }: RecentOrdersProps) {
   if (!isAuthenticated || orders.length === 0) {
     return (
-      <section className="py-12 bg-slate-50 dark:bg-slate-900/50">
+      <section className="py-12 bg-white">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-8">
+          <h2 className="text-2xl font-bold text-slate-900 mb-8">
             Quick Reorder
           </h2>
-          <Card className="border-dashed border-slate-300 dark:border-slate-700">
+          <Card className="border-dashed border-slate-300">
             <CardContent className="py-12 text-center">
               <Package className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600 dark:text-slate-400 mb-4">
+              <p className="text-slate-600 mb-4">
                 No recent orders yet. Start shopping!
               </p>
               <Link href="/shops">
-                <Button className="gap-2">
+                <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
                   <Package className="h-4 w-4" />
                   Browse Shops
                 </Button>
@@ -48,23 +48,23 @@ export function RecentOrders({ orders, isAuthenticated }: RecentOrdersProps) {
   }
 
   return (
-    <section className="py-12 bg-slate-50 dark:bg-slate-900/50">
+    <section className="py-12 bg-white">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-8">
+        <h2 className="text-2xl font-bold text-slate-900 mb-8">
           Quick Reorder
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {orders.slice(0, 3).map((order) => (
             <Link key={order.id} href={`/orders/${order.id}`}>
-              <Card className="h-full hover:shadow-lg dark:hover:shadow-cyan-500/10 transition-all duration-300 cursor-pointer border-slate-200 dark:border-slate-800">
+              <Card className="h-full hover:border-emerald-200 transition-colors cursor-pointer border-slate-200">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white line-clamp-1">
+                      <h3 className="font-semibold text-slate-900 line-clamp-1">
                         {order.shopName}
                       </h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                      <p className="text-sm text-slate-600">
                         {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
                       </p>
                     </div>
@@ -82,13 +82,13 @@ export function RecentOrders({ orders, isAuthenticated }: RecentOrdersProps) {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-t border-slate-200 dark:border-slate-800">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Total</span>
-                    <span className="font-bold text-slate-900 dark:text-white">
+                  <div className="flex items-center justify-between py-2 border-t border-slate-200">
+                    <span className="text-sm text-slate-600">Total</span>
+                    <span className="font-bold text-slate-900">
                       ${order.totalPrice}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-500 flex items-center gap-1">
+                  <div className="text-xs text-slate-600 flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {new Date(order.createdAt).toLocaleDateString()}
                   </div>

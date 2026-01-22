@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, notFound } from "next/navigation"
 import { supabase } from "@/lib/supabase/client"
+import { logger } from "@/lib/logger"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,13 +13,13 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
-  pending: { color: "bg-yellow-500/20 text-yellow-400", icon: Clock, label: "Pending" },
-  accepted: { color: "bg-blue-500/20 text-blue-400", icon: CheckCircle, label: "Accepted" },
-  ready: { color: "bg-purple-500/20 text-purple-400", icon: Store, label: "Ready" },
-  picked_up: { color: "bg-orange-500/20 text-orange-400", icon: Truck, label: "On the Way" },
-  delivered: { color: "bg-emerald-500/20 text-emerald-400", icon: Package, label: "Delivered" },
-  rejected: { color: "bg-red-500/20 text-red-400", icon: Package, label: "Rejected" },
+const statusConfig: Record<string, { color: string; bgColor: string; icon: any; label: string }> = {
+  pending: { color: "text-yellow-600", bgColor: "bg-yellow-100 border-yellow-200", icon: Clock, label: "Pending" },
+  accepted: { color: "text-blue-600", bgColor: "bg-blue-100 border-blue-200", icon: CheckCircle, label: "Accepted" },
+  ready: { color: "text-purple-600", bgColor: "bg-purple-100 border-purple-200", icon: Store, label: "Ready" },
+  picked_up: { color: "text-orange-600", bgColor: "bg-orange-100 border-orange-200", icon: Truck, label: "On the Way" },
+  delivered: { color: "text-emerald-600", bgColor: "bg-emerald-100 border-emerald-200", icon: Package, label: "Delivered" },
+  rejected: { color: "text-red-600", bgColor: "bg-red-100 border-red-200", icon: Package, label: "Rejected" },
 }
 
 export default function OrderTrackingPage() {
@@ -43,7 +44,7 @@ export default function OrderTrackingPage() {
       
       setOrder(data.order)
     } catch (err) {
-      console.error("Failed to load order:", err)
+      logger.error("Failed to load order:", err)
       setOrder(null)
     } finally {
       setLoading(false)
@@ -63,7 +64,7 @@ export default function OrderTrackingPage() {
         table: "orders", 
         filter: `id=eq.${id}` 
       }, (payload) => {
-        console.log("Order updated:", payload.new)
+        logger.log("Order updated:", payload.new)
         setOrder(payload.new as any)
         setLoading(false)
       })
@@ -81,10 +82,10 @@ export default function OrderTrackingPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-8">
-        <div className="space-y-4">
+      <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 px-4 py-8">
+        <div className="mx-auto max-w-2xl space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 rounded-2xl bg-card animate-pulse" />
+            <div key={i} className="h-32 rounded-2xl bg-white animate-pulse shadow-sm border border-slate-200" />
           ))}
         </div>
       </main>
@@ -93,13 +94,15 @@ export default function OrderTrackingPage() {
 
   if (!order) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-8 text-center">
-        <Package className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Order not found</h2>
-        <p className="text-muted-foreground mb-4">The order you're looking for doesn't exist</p>
-        <Button asChild>
-          <Link href="/myorders">View My Orders</Link> {/* Fixed link */}
-        </Button>
+      <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 px-4 py-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <Package className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">Order not found</h2>
+          <p className="text-slate-500 mb-4">The order you're looking for doesn't exist</p>
+          <Button asChild>
+            <Link href="/myorders">View My Orders</Link>
+          </Button>
+        </div>
       </main>
     )
   }
@@ -108,29 +111,28 @@ export default function OrderTrackingPage() {
   const StatusIcon = status.icon
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
-      <Button asChild variant="ghost" className="mb-4">
-        <Link href="/myorders"> {/* Fixed link */}
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to My Orders
-        </Link>
-      </Button>
+    <main className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 px-4 py-8">
+      <div className="mx-auto max-w-2xl">
+        {/* Header */}
+        <Button asChild variant="ghost" className="mb-6 gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/50">
+          <Link href="/myorders">
+            <ArrowLeft className="h-4 w-4" />
+            Back to My Orders
+          </Link>
+        </Button>
 
-      <Card className="bg-card border-border overflow-hidden">
-        <div className={`h-2 ${order.status === "delivered" ? "bg-emerald-500" : "bg-primary"}`} />
-        
-        <CardContent className="p-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+        {/* Order Status Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 mb-4">
+          <div className="flex items-start justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-2xl font-bold">Order Tracking</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Order #{order.id.slice(0, 8).toUpperCase()}</h1>
+              <div className="flex items-center gap-2 text-slate-600">
+                <Calendar className="h-4 w-4" />
+                <p className="text-sm">
                   {new Date(order.created_at).toLocaleDateString('en-IN', {
-                    weekday: 'long',
+                    weekday: 'short',
                     day: 'numeric',
-                    month: 'long',
+                    month: 'short',
                     year: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit'
@@ -138,124 +140,160 @@ export default function OrderTrackingPage() {
                 </p>
               </div>
             </div>
-            <Badge className={`${status.color} text-lg px-4 py-2`}>
+            <Badge className={`${status.bgColor} ${status.color} border text-base px-4 py-2`}>
               <StatusIcon className="h-5 w-5 mr-2" />
               {status.label}
             </Badge>
           </div>
+          
+          {/* Status progress indicator */}
+          <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
+            <div 
+              className={`h-full transition-all duration-500 ${
+                order.status === "delivered" ? "bg-emerald-500" :
+                order.status === "picked_up" ? "bg-orange-500 w-3/4" :
+                order.status === "ready" ? "bg-purple-500 w-1/2" :
+                order.status === "accepted" ? "bg-blue-500 w-1/4" :
+                "bg-yellow-500 w-0"
+              }`}
+              style={{
+                width: order.status === "delivered" ? "100%" :
+                       order.status === "picked_up" ? "75%" :
+                       order.status === "ready" ? "50%" :
+                       order.status === "accepted" ? "25%" :
+                       "0%"
+              }}
+            />
+          </div>
+        </div>
 
-          {/* Order Items */}
-          <div className="space-y-4 mb-6">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Order Items
-            </h3>
+        {/* Order Items Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 mb-4">
+          <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2 mb-4">
+            <Package className="h-5 w-5 text-emerald-600" />
+            Order Items
+          </h3>
+          <div className="space-y-3">
             {(order.products || []).map((p: any, i: number) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30">
-                <div>
-                  <p className="font-medium">{p.name}</p>
-                  <p className="text-sm text-muted-foreground">₹{p.price} × {p.quantity}</p>
+              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="flex-1">
+                  <p className="font-medium text-slate-900">{p.name}</p>
+                  <p className="text-sm text-slate-500">₹{p.price} × {p.quantity}</p>
                 </div>
-                <p className="font-bold">₹{Number(p.price) * Number(p.quantity)}</p>
+                <p className="font-bold text-slate-900">₹{Number(p.price) * Number(p.quantity)}</p>
               </div>
             ))}
           </div>
+        </div>
 
-          {/* Pricing Summary */}
-          <div className="space-y-3 mb-6 p-4 rounded-xl bg-secondary/30">
+        {/* Bill Summary Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 mb-4">
+          <h3 className="font-bold text-slate-900 text-lg mb-4">Bill Summary</h3>
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Items Total</span>
-              <span>₹{order.total_price - (order.delivery_cost || 0)}</span>
+              <span className="text-slate-600">Items Total</span>
+              <span className="font-medium text-slate-900">₹{order.total_price - (order.delivery_cost || 0)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground flex items-center gap-2">
+              <span className="text-slate-600 flex items-center gap-2">
                 <Truck className="h-4 w-4" /> Delivery Fee
               </span>
-              <span>₹{order.delivery_cost || 0}</span>
+              <span className="font-medium text-slate-900">₹{order.delivery_cost || 0}</span>
             </div>
-            <div className="border-t border-border pt-3 flex items-center justify-between">
-              <span className="font-semibold text-lg">Grand Total</span>
-              <span className="text-2xl font-bold text-primary flex items-center">
+            <div className="border-t border-slate-200 pt-3 flex items-center justify-between">
+              <span className="font-bold text-slate-900">Grand Total</span>
+              <span className="text-2xl font-bold text-emerald-600 flex items-center">
                 <IndianRupee className="h-5 w-5" />{order.total_price}
               </span>
             </div>
           </div>
+        </div>
 
-          {/* Customer Info */}
-          <div className="space-y-4 mb-6">
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Customer Details
-            </h3>
-            <div className="grid gap-3">
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Name</p>
-                  <p className="font-medium">{order.buyer_name}</p>
+        {/* Customer Details Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 mb-4">
+          <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2 mb-4">
+            <User className="h-5 w-5 text-emerald-600" />
+            Customer Details
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <User className="h-4 w-4 text-slate-500 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500 font-medium">Name</p>
+                <p className="font-medium text-slate-900 truncate">{order.buyer_name}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <Phone className="h-4 w-4 text-slate-500 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-xs text-slate-500 font-medium">Contact</p>
+                <p className="font-medium text-slate-900">{order.buyer_contact || order.buyer_phone}</p>
+              </div>
+            </div>
+            {order.buyer_address && (
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <MapPin className="h-4 w-4 text-slate-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-500 font-medium">Address</p>
+                  <p className="font-medium text-slate-900 break-words">{order.buyer_address}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Contact</p>
-                  <p className="font-medium">{order.buyer_contact || order.buyer_phone}</p>
-                </div>
-              </div>
-              {order.buyer_address && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Address</p>
-                    <p className="font-medium">{order.buyer_address}</p>
-                  </div>
-                </div>
-              )}
+            )}
+          </div>
+        </div>
+
+        {/* Delivery OTP Card */}
+        <div className={`border-2 rounded-2xl shadow-sm p-6 mb-4 ${
+          order.status === "delivered" 
+            ? "bg-emerald-50 border-emerald-200" 
+            : "bg-emerald-50 border-emerald-200"
+        }`}>
+          <p className="text-sm text-slate-600 text-center mb-3">
+            {order.status === "delivered"
+              ? "✅ Delivery Completed - OTP Verified"
+              : "🔐 Delivery OTP"}
+          </p>
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-5xl font-mono font-bold text-emerald-600 flex-1 text-center">{order.otp}</p>
+            {order.status !== "delivered" && (
+              <Button 
+                size="icon"
+                variant="outline"
+                onClick={() => copyOTP(order.otp)}
+                className="h-12 w-12 border-emerald-300 hover:bg-white"
+              >
+                <Copy className="h-5 w-5 text-emerald-600" />
+              </Button>
+            )}
+          </div>
+          {order.status !== "delivered" && (
+            <p className="text-xs text-slate-600 text-center mt-3">Share with delivery partner</p>
+          )}
+        </div>
+
+        {/* Payment Info Card */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+            <div className="flex-1">
+              <p className="text-xs text-slate-500 font-medium mb-1">Payment Method</p>
+              <p className="font-bold text-slate-900">{order.payment_type}</p>
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-slate-500 font-medium mb-1">Payment Status</p>
+              <Badge variant={order.payment_status === "paid" ? "default" : "secondary"} className="text-sm px-3 py-1">
+                {order.payment_status === "paid" ? "✓ Paid" : "Pending"}
+              </Badge>
             </div>
           </div>
+        </div>
 
-          {/* OTP Section */}
-          <div className={`p-6 rounded-xl mb-6 ${order.status === "delivered" ? "bg-emerald-500/10 border border-emerald-500/30" : "bg-primary/10 border border-primary/30"}`}>
-            <div className="flex items-center justify-between">
-              <div className="w-full text-center">
-                <p className="text-sm text-muted-foreground mb-2">
-                  {order.status === "delivered"
-                    ? "✅ Delivery Completed - OTP Verified"
-                    : "🔐 Delivery OTP (share with delivery partner)"}
-                </p>
-                <p className="text-4xl font-mono font-bold"> {order.otp}</p>
-              </div>
-              {order.status !== "delivered" && (
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  onClick={() => copyOTP(order.otp)}
-                  className="h-12 w-12"
-                >
-                  <Copy className="h-5 w-5" />
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Payment Info */}
-          <div className="flex items-center gap-3 justify-center mb-6">
-            <Badge variant="outline" className="text-lg px-4 py-2">
-              Payment: {order.payment_type}
-            </Badge>
-            <Badge variant={order.payment_status === "paid" ? "default" : "secondary"} className="text-lg px-4 py-2">
-              Status: {order.payment_status}
-            </Badge>
-          </div>
-
-          {/* Real-time note */}
-          <div className="text-center p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
-            <p className="text-sm text-blue-500">
-              ⚡ This page updates in real-time. No need to refresh!
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Real-time Update Info */}
+        <div className="text-center p-4 bg-blue-50 border border-blue-200 rounded-2xl">
+          <p className="text-sm text-blue-700 font-medium">
+            ⚡ This page updates in real-time. No need to refresh!
+          </p>
+        </div>
+      </div>
     </main>
   )
 }

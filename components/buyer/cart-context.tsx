@@ -1,8 +1,10 @@
 "use client"
 
+
+import { logger } from '@/lib/logger'
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react"
 import { supabase } from "@/lib/supabase/client"
-import type { User } from "@supabase/supabase-js"
+import { useAuth } from "@/components/auth/auth-provider"
 import { useRouter } from "next/navigation"
 
 interface CartItem {
@@ -18,7 +20,7 @@ interface Buyer {
   email: string
   phone: string
   address?: string
-  role?: string // Add role field
+  role?: string
 }
 
 interface CartContextType {
@@ -27,8 +29,8 @@ interface CartContextType {
   buyer: Buyer | null
   isAuthenticated: boolean
   isLoading: boolean
-  isAdmin: boolean // Add this
-  isBuyer: boolean // Add this
+  isAdmin: boolean
+  isBuyer: boolean
   add: (item: { product_id: string; name: string; price: number }) => void
   remove: (productId: string) => void
   dec: (productId: string) => void
@@ -44,195 +46,81 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
+  const { user, profile, loading: authLoading, isAdmin: authIsAdmin, isBuyer: authIsBuyer, logout } = useAuth()
+  
   const [items, setItems] = useState<CartItem[]>([])
   const [buyer, setBuyer] = useState<Buyer | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [authChecked, setAuthChecked] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [isBuyer, setIsBuyer] = useState(false)
 
-  // Load user data from Supabase
-  const loadUserData = useCallback(async (user: User) => {
-    try {
-      console.log("Loading user data for:", user.id)
-      
-      // Get user role from metadata
-      const role = user.user_metadata?.role || "buyer"
-      console.log("User role:", role)
-      
-      // Try to fetch user profile from database (profiles table)
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.warn("Profile fetch error:", profileError.message)
-      }
-
-      // Use profile data if available, otherwise use user_metadata
-      const buyerData: Buyer = {
-        id: user.id,
-        name: profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-        email: user.email || '',
-        phone: profile?.phone || user.user_metadata?.phone || user.phone || '',
-        address: profile?.address || user.user_metadata?.address || '',
-        role: role
-      }
-
-      console.log("✅ User loaded in cart:", { ...buyerData, role })
-      setBuyer(buyerData)
-      setIsAuthenticated(true)
-      
-      // Set role flags
-      setIsAdmin(role === "admin")
-      setIsBuyer(role === "buyer" || !role) // Default to buyer if no role
-      
-      setAuthChecked(true)
-      
-      // Store in localStorage for fallback
-      localStorage.setItem("jq_buyer", JSON.stringify(buyerData))
-    } catch (error) {
-      console.error("Error loading user data:", error)
-      // Fallback to user metadata
-      const role = user.user_metadata?.role || "buyer"
-      const buyerData: Buyer = {
-        id: user.id,
-        name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-        email: user.email || '',
-        phone: user.user_metadata?.phone || user.phone || '',
-        address: user.user_metadata?.address || '',
-        role: role
-      }
-      setBuyer(buyerData)
-      setIsAuthenticated(true)
-      setIsAdmin(role === "admin")
-      setIsBuyer(role === "buyer" || !role)
-      setAuthChecked(true)
-    }
-  }, [])
-
-  // Initialize cart and auth
-  const initialize = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      
-      // Get user
-      const { data: { user }, error: sessionError } = await supabase.auth.getUser()
-      
-      if (sessionError) {
-        console.error("User error:", sessionError)
-      }
-      
-      if (user) {
-        console.log("✅ Found user:", user.email)
-        await loadUserData(user)
-        
-        // If user is admin, don't show buyer cart - admin shouldn't shop
-        const role = user.user_metadata?.role
-        if (role === "admin") {
-          console.log("⚠️ Admin detected - clearing cart context")
-          setItems([]) // Clear cart for admin
-          localStorage.removeItem("jq_cart")
-        }
-      } else {
-        console.log("❌ No session found")
-        setIsAuthenticated(false)
-        setBuyer(null)
-        setIsAdmin(false)
-        setIsBuyer(false)
-        setAuthChecked(true)
-      }
-
-      // Load cart from localStorage ONLY if not admin
-      const savedCart = localStorage.getItem("jq_cart")
-      if (savedCart && !isAdmin) {
-        try {
-          const parsed = JSON.parse(savedCart)
-          setItems(Array.isArray(parsed) ? parsed : [])
-        } catch (error) {
-          console.error("Error parsing cart:", error)
-          setItems([])
-        }
-      }
-    } catch (error) {
-      console.error("Error initializing cart:", error)
-    } finally {
-      setIsLoading(false)
-      setAuthChecked(true)
-    }
-  }, [loadUserData])
-
-  // Load user session and cart
+  // Sync auth state to buyer state
   useEffect(() => {
-    initialize()
-    
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, "has session:", !!session)
-      
-      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        if (session?.user) {
-          await loadUserData(session.user)
-          
-          // Clear cart if admin logs in
-          const role = session.user.user_metadata?.role
-          if (role === "admin") {
-            setItems([])
-            localStorage.removeItem("jq_cart")
+    if (!authLoading) {
+      if (user && profile) {
+        // User is authenticated and profile loaded
+        const buyerData: Buyer = {
+          id: user.id,
+          name: profile.name || user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          phone: profile.phone || user.user_metadata?.phone || '',
+          address: profile.address || user.user_metadata?.address || '',
+          role: profile.role
+        }
+        logger.log("✅ Buyer data synced from auth context:", buyerData)
+        setBuyer(buyerData)
+        localStorage.setItem("jq_buyer", JSON.stringify(buyerData))
+        
+        // Clear cart if admin
+        if (authIsAdmin) {
+          logger.log("⚠️ Admin detected - clearing cart")
+          setItems([])
+          localStorage.removeItem("jq_cart")
+        } else {
+          // Load cart from localStorage for buyers
+          const savedCart = localStorage.getItem("jq_cart")
+          if (savedCart) {
+            try {
+              const parsed = JSON.parse(savedCart)
+              setItems(Array.isArray(parsed) ? parsed : [])
+            } catch (error) {
+              logger.error("Error parsing cart:", error)
+              setItems([])
+            }
           }
         }
-      } else if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false)
+      } else if (!user) {
+        // User not authenticated
+        logger.log("❌ No user authenticated")
         setBuyer(null)
-        setIsAdmin(false)
-        setIsBuyer(false)
-        setAuthChecked(true)
         localStorage.removeItem("jq_buyer")
-      } else if (event === 'INITIAL_SESSION') {
-        // Initial session loaded
-        if (session?.user) {
-          await loadUserData(session.user)
+        
+        // Load cart from localStorage for anonymous users
+        const savedCart = localStorage.getItem("jq_cart")
+        if (savedCart) {
+          try {
+            const parsed = JSON.parse(savedCart)
+            setItems(Array.isArray(parsed) ? parsed : [])
+          } catch (error) {
+            logger.error("Error parsing cart:", error)
+            setItems([])
+          }
         }
       }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [initialize, loadUserData])
-
-  // Refresh user data
-  const refreshUser = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await loadUserData(user)
-      } else {
-        setIsAuthenticated(false)
-        setBuyer(null)
-        setIsAdmin(false)
-        setIsBuyer(false)
-      }
-    } catch (error) {
-      console.error("Error refreshing user:", error)
     }
-  }, [loadUserData])
+  }, [user, profile, authLoading, authIsAdmin])
 
-  // Save cart to localStorage ONLY if buyer
+  // Save cart to localStorage (not for admins)
   useEffect(() => {
-    if (!isLoading && !isAdmin) {
+    if (!authLoading && !authIsAdmin) {
       localStorage.setItem("jq_cart", JSON.stringify(items))
     }
-  }, [items, isLoading, isAdmin])
+  }, [items, authLoading, authIsAdmin])
 
   // Calculate total
   const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
   // Add item to cart - ONLY if buyer
   const add = (newItem: { product_id: string; name: string; price: number }) => {
-    if (isAdmin) {
-      console.log("⚠️ Admin cannot add items to cart")
+    if (authIsAdmin) {
+      logger.log("⚠️ Admin cannot add items to cart")
       return
     }
     
@@ -253,13 +141,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Remove item completely - ONLY if buyer
   const remove = (productId: string) => {
-    if (isAdmin) return
+    if (authIsAdmin) return
     setItems(prevItems => prevItems.filter(item => item.product_id !== productId))
   }
 
   // Decrease quantity - ONLY if buyer
   const dec = (productId: string) => {
-    if (isAdmin) return
+    if (authIsAdmin) return
     setItems(prevItems => {
       const existingItem = prevItems.find(item => item.product_id === productId)
       
@@ -281,14 +169,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("jq_cart")
   }
 
-  // Update buyer info and sync to Supabase profiles table
+  // Update buyer info in profiles table
   const handleSetBuyer = async (buyerData: Buyer) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        console.error("Not authenticated when setting buyer")
-        throw new Error("Not authenticated")
+      // Only allow authenticated users to set buyer profile
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
+        return // Guest users cannot set profile
       }
+      const user = session.user
 
       // Update user metadata
       const { error: metadataError } = await supabase.auth.updateUser({
@@ -300,7 +189,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       })
 
       if (metadataError) {
-        console.error("Metadata update error:", metadataError)
+        logger.error("Metadata update error:", metadataError)
         throw metadataError
       }
 
@@ -319,34 +208,61 @@ export function CartProvider({ children }: { children: ReactNode }) {
         })
 
       if (profileError) {
-        console.warn("Could not update profiles table:", profileError.message)
+        logger.warn("Could not update profiles table:", profileError.message)
       }
 
       // Update local state
       setBuyer(buyerData)
-      setIsAuthenticated(true)
       
       // Store in localStorage
       localStorage.setItem("jq_buyer", JSON.stringify(buyerData))
       
-      console.log("✅ Buyer info updated and synced")
+      logger.log("✅ Buyer info updated and synced")
     } catch (error) {
-      console.error("Error updating buyer:", error)
+      logger.error("Error updating buyer:", error)
       throw error
     }
   }
 
-  // Logout
-  const logout = async () => {
-    await supabase.auth.signOut()
-    setBuyer(null)
-    setIsAuthenticated(false)
-    setIsAdmin(false)
-    setIsBuyer(false)
-    localStorage.removeItem("jq_buyer")
-    clear()
-    router.refresh()
-  }
+  // Refresh user data from auth context
+  const refreshUser = useCallback(async () => {
+    try {
+      logger.log("📝 Refreshing user profile from auth...")
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
+        logger.log("❌ No session found")
+        return
+      }
+
+      // Refetch profile from profiles table
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+
+      if (error) {
+        logger.error("Error refetching profile:", error)
+        return
+      }
+
+      if (profile) {
+        const refreshedBuyer: Buyer = {
+          id: session.user.id,
+          name: profile.name || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email || '',
+          phone: profile.phone || session.user.user_metadata?.phone || '',
+          address: profile.address || session.user.user_metadata?.address || '',
+          role: profile.role
+        }
+        logger.log("✅ User profile refreshed:", refreshedBuyer)
+        setBuyer(refreshedBuyer)
+        localStorage.setItem("jq_buyer", JSON.stringify(refreshedBuyer))
+      }
+    } catch (error) {
+      logger.error("Error in refreshUser:", error)
+    }
+  }, [])
 
   // Get total item count
   const getItemCount = () => {
@@ -363,11 +279,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     <CartContext.Provider value={{
       items,
       total,
-      buyer: authChecked ? buyer : null,
-      isAuthenticated: authChecked ? isAuthenticated : false,
-      isLoading,
-      isAdmin,
-      isBuyer,
+      buyer,
+      isAuthenticated: !!user,
+      isLoading: authLoading,
+      isAdmin: authIsAdmin,
+      isBuyer: authIsBuyer,
       add,
       remove,
       dec,
@@ -390,3 +306,4 @@ export const useCart = () => {
   }
   return context
 }
+

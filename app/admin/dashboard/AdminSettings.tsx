@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import useSWR from "swr"
 import { useToast } from "@/hooks/use-toast"
+import { logger } from "@/lib/logger"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,7 +33,7 @@ export default function AdminSettings() {
   // Initialize state from API data
   useEffect(() => {
     if (data) {
-      console.log("Settings data loaded:", data)
+      logger.log("Settings data loaded:", data)
       
       // Set all settings from API response
       setDeliveryFee(data.delivery_fee?.toString() || "30")
@@ -64,7 +65,7 @@ export default function AdminSettings() {
         throw new Error(result.error || `Failed to save ${key}`)
       }
       
-      console.log(`✅ Saved ${key}:`, value)
+      logger.log(`✅ Saved ${key}:`, value)
       
       // Refresh settings data
       mutateSettings()
@@ -77,7 +78,7 @@ export default function AdminSettings() {
       })
       
     } catch (error: any) {
-      console.error(`❌ Save error for ${key}:`, error)
+      logger.error(`❌ Save error for ${key}:`, error)
       alert(`Failed to save ${key.replace('_', ' ')}: ${error.message}`)
     } finally {
       setSaving(false)

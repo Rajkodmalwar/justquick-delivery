@@ -1,5 +1,7 @@
 "use client"
 
+
+import { logger } from '@/lib/logger'
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -74,7 +76,7 @@ export function BuyerLogin({ open, onOpenChange, onSuccess }: BuyerLoginProps) {
       })
 
       if (magicError) {
-        console.error("Magic link error:", magicError.message)
+        logger.error("Magic link error:", magicError.message)
         
         if (magicError.message.includes("already registered") || 
             magicError.message.includes("User already registered")) {
@@ -98,7 +100,7 @@ export function BuyerLogin({ open, onOpenChange, onSuccess }: BuyerLoginProps) {
       setEmailSent(email)
 
     } catch (err: any) {
-      console.error("Registration error:", err.message)
+      logger.error("Registration error:", err.message)
       setError(err.message || "Failed to register. Please try again.")
     } finally {
       setLoading(false)
