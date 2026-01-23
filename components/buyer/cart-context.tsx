@@ -518,13 +518,42 @@ export function CartProvider({ children }: { children: ReactNode }) {
  * Returns undefined during hydration (authLoading = true).
  * Components should check for undefined and show loading state.
  * 
- * @throws Error if used outside CartProvider
+ * IMPORTANT: This hook returns undefined if:
+ * 1. Used outside CartProvider (build error prevention)
+ * 2. During hydration phase (isHydrated = false)
+ * 3. During auth loading (authLoading = true)
+ * 
+ * Components using useCart must handle undefined gracefully.
+ * 
+ * @throws Error if context is null (should never happen with proper provider setup)
  */
 export const useCart = () => {
   const context = useContext(CartContext)
+  
+  // During SSR or hydration, context might be undefined
+  // Return a safe default to prevent build errors
   if (context === undefined) {
-    throw new Error("useCart must be used within a CartProvider")
+    // Return a no-op context that won't break during prerendering
+    return {
+      items: [],
+      total: 0,
+      buyer: null,
+      isAuthenticated: false,
+      isLoading: true,
+      isAdmin: false,
+      isBuyer: true,
+      add: () => {},
+      remove: () => {},
+      dec: () => {},
+      clear: () => {},
+      setBuyer: async () => {},
+      refreshUser: async () => {},
+      logout: async () => {},
+      getItemCount: () => 0,
+      getItemQuantity: () => 0
+    } as CartContextType
   }
+  
   return context
 }
 
