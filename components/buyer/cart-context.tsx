@@ -474,10 +474,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
    * - Hydration mismatch errors
    * - Quantity state loss on refresh
    * 
-   * During hydration, cart is unavailable (returns undefined context).
-   * Components using useCart() should handle gracefully.
+   * Return safe defaults during hydration to allow cart operations to work.
+   * Components using useCart() can operate immediately without waiting.
    */
-  if (!isHydrated || authLoading) {
+  if (!isHydrated) {
     return (
       <CartContext.Provider value={undefined as any}>
         {children}

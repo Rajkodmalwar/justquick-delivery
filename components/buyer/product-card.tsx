@@ -110,35 +110,9 @@ export function ProductCard({ product, shopId }: ProductCardProps) {
               ₹{product.price}
             </p>
           </div>
-          
-          {quantity > 0 ? (
-            <div className="mt-4 flex items-center gap-2 bg-slate-50 rounded-lg p-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleDecrease}
-                className="h-8 w-8 p-0 hover:bg-slate-200"
-                disabled={adding}
-              >
-                <Minus className="h-4 w-4 text-slate-600" />
-              </Button>
-              
-              <span className="w-8 text-center font-bold text-slate-900">{quantity}</span>
-              
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleIncrease}
-                className="h-8 w-8 p-0 hover:bg-slate-200"
-                disabled={adding}
-              >
-                <Plus className="h-4 w-4 text-slate-600" />
-              </Button>
-            </div>
-          ) : null}
         </div>
 
-        {/* Add to Cart Button */}
+        {/* Add to Cart or Quantity Controls */}
         {quantity === 0 ? (
           <Button
             onClick={handleAddToCart}
@@ -149,8 +123,31 @@ export function ProductCard({ product, shopId }: ProductCardProps) {
             {adding ? "Adding..." : "Add to Cart"}
           </Button>
         ) : (
-          <div className="text-sm text-slate-600 text-center font-medium">
-            {quantity} in cart
+          <div className="space-y-2">
+            <div className="flex items-center justify-center gap-2 bg-emerald-50 rounded-lg p-2 border border-emerald-200">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleDecrease}
+                className="h-8 w-8 p-0 hover:bg-emerald-100 text-emerald-600"
+                disabled={adding}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              
+              <span className="w-12 text-center font-bold text-emerald-900">{quantity}</span>
+              
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleIncrease}
+                className="h-8 w-8 p-0 hover:bg-emerald-100 text-emerald-600"
+                disabled={adding}
+                title="Add more"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

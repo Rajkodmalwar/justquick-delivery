@@ -45,7 +45,12 @@ export default function CartPage() {
     )
   }
 
-  const isProfileComplete = buyer?.phone && /^[6-9]\d{9}$/.test(buyer.phone.replace(/\D/g, ''))
+  // Check if profile is complete - requires phone (valid format) and address
+  const isProfileComplete = buyer && 
+    buyer.phone && 
+    /^[6-9]\d{9}$/.test(buyer.phone.replace(/\D/g, '')) &&
+    buyer.address &&
+    buyer.address.trim().length > 0
 
   return (
     <main className="min-h-screen px-4 py-8">
