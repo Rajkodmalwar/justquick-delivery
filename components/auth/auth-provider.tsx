@@ -19,8 +19,13 @@ interface UserProfile {
 /**
  * AuthContext - Global authentication state
  * 
+ * HYDRATION SAFETY:
+ * - user starts as undefined (not checked yet)
+ * - user becomes null after session check completes with no user
+ * - This prevents "flash" where UI briefly shows logged-out state
+ * 
  * Provides:
- * - user: Authenticated Supabase user object
+ * - user: Authenticated Supabase user object (undefined = checking, null = not logged in)
  * - profile: User profile from public.profiles table
  * - session: Active session object
  * - loading: Loading state during auth check
@@ -32,7 +37,7 @@ interface UserProfile {
  * Updates instantly via onAuthStateChange listener
  */
 interface AuthContextType {
-  user: User | null
+  user: User | null | undefined
   profile: UserProfile | null
   session: Session | null
   loading: boolean
@@ -49,7 +54,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  // HYDRATION FIX: Initial state is undefined (not null)
+  // This prevents "flash" where cart/UI briefly disappears on page load
+  // Null means "checked and found nothing", undefined means "not checked yet"
+  const [user, setUser] = useState<User | undefined>(undefined)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
@@ -238,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      logger.log("🚪 Signing out...")
+      logger.log("🚪 Auth: Signing out...")
       
       // First, call the server logout endpoint to clear all cookies
       const logoutResponse = await fetch('/api/auth/logout', {
@@ -247,21 +255,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (!logoutResponse.ok) {
-        logger.warn("⚠️ Server logout failed, clearing client state anyway")
+        logger.warn("⚠️ Auth: Server logout failed, clearing client state anyway")
       }
 
       // Then sign out from client
       const { error } = await supabase.auth.signOut()
 
       if (error) {
-        logger.error("❌ Sign out error:", error)
+        logger.error("❌ Auth: Sign out error", error)
         throw error
       }
 
-      logger.log("✅ Successfully signed out from server and client")
-      // State will be cleared by onAuthStateChange listener
+      logger.log("✅ Auth: Successfully signed out")
+      // Session state will be cleared by onAuthStateChange listener
+      // Cart will be cleared separately by cart context logout()
     } catch (error) {
-      logger.error("❌ Logout error:", error)
+      logger.error("❌ Auth: Logout error", error)
       // Force clear state even if request fails
       setUser(null)
       setSession(null)
