@@ -1,442 +1,242 @@
 /**
- * Email Service - Unified interface for multiple email providers
+ * Email Service - Simple & Reliable
  * 
- * Supports:
- * - Resend (recommended for Next.js)
- * - SendGrid
- * - Generic SMTP (Gmail, Mailgun, AWS SES, etc.)
+ * Uses Resend API directly via HTTP (no SDK complications)
+ * Falls back to nodemailer for SMTP if needed
  * 
- * Configuration: See .env.local
+ * Configuration: .env.local
  */
 
-import nodemailer from "nodemailer"
 import { logger } from "@/lib/logger"
+import nodemailer from "nodemailer"
 
-interface EmailOptions {
-  to: string
-  subject: string
-  html: string
-  text?: string
-  from?: string
+interface EmailResult {
+  success: boolean
+  error?: string
+  messageId?: string
 }
 
 class EmailService {
   private provider: string
-  private resend?: any
-  private transporter?: nodemailer.Transporter
   private fromEmail: string
+  private smtpTransporter?: nodemailer.Transporter
 
   constructor() {
-    this.provider = process.env.EMAIL_PROVIDER || "resend"
-    this.fromEmail =
-      process.env.RESEND_FROM_EMAIL ||
-      process.env.SENDGRID_FROM_EMAIL ||
-      process.env.SMTP_FROM_EMAIL ||
-      "noreply@justquick.delivery"
+    this.provider = (process.env.EMAIL_PROVIDER || "resend").toLowerCase()
+    this.fromEmail = process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM_EMAIL || "onboarding@resend.dev"
 
-    this.initProvider()
-  }
-
-  private initProvider() {
     try {
-      switch (this.provider) {
-        case "resend":
-          this.initResend()
-          break
-        case "sendgrid":
-          this.initSendGrid()
-          break
-        case "smtp":
-          this.initSMTP()
-          break
-        default:
-          logger.warn(`Unknown email provider: ${this.provider}, defaulting to resend`)
-          this.initResend()
+      if (this.provider === "smtp") {
+        this.initSMTP()
       }
+      logger.log(`✅ Email: ${this.provider} provider ready`)
     } catch (error) {
-      logger.error("Failed to initialize email provider:", error)
-    }
-  }
-
-  private initResend() {
-    const apiKey = process.env.RESEND_API_KEY
-    if (!apiKey) {
-      throw new Error(
-        "RESEND_API_KEY not set in environment variables"
-      )
-    }
-
-    // Dynamically import resend only when needed
-    try {
-      const ResendModule = require("resend")
-      this.resend = new ResendModule.Resend(apiKey)
-      logger.log("📧 Email: Initialized Resend provider")
-    } catch (error) {
-      logger.error("Failed to import resend:", error)
-      throw error
-    }
-  }
-
-  private initSendGrid() {
-    const apiKey = process.env.SENDGRID_API_KEY
-    if (!apiKey) {
-      throw new Error(
-        "SENDGRID_API_KEY not set in environment variables"
-      )
-    }
-
-    // SendGrid initialization
-    try {
-      const sgMail = require("@sendgrid/mail")
-      sgMail.setApiKey(apiKey)
-      this.resend = sgMail
-      logger.log("📧 Email: Initialized SendGrid provider")
-    } catch (error) {
-      logger.error("Failed to import sendgrid:", error)
-      throw error
+      logger.error(`❌ Email: Setup error`, error instanceof Error ? error.message : String(error))
     }
   }
 
   private initSMTP() {
     const host = process.env.SMTP_HOST
-    const port = parseInt(process.env.SMTP_PORT || "587")
+    const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587
     const user = process.env.SMTP_USER
     const password = process.env.SMTP_PASSWORD
-    const secure = process.env.SMTP_SECURE === "true"
 
     if (!host || !user || !password) {
-      throw new Error(
-        "SMTP configuration incomplete. Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD"
-      )
+      throw new Error("SMTP_HOST, SMTP_USER, SMTP_PASSWORD required")
     }
 
-    this.transporter = nodemailer.createTransport({
+    this.smtpTransporter = nodemailer.createTransport({
       host,
       port,
-      secure,
-      auth: {
-        user,
-        pass: password
-      }
+      secure: process.env.SMTP_SECURE === "true",
+      auth: { user, pass: password },
+      connectionTimeout: 5000,
+      socketTimeout: 5000
     })
-
-    logger.log(`📧 Email: Initialized SMTP provider (${host}:${port})`)
   }
 
-  async send(options: EmailOptions): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  async send(options: {
+    to: string
+    subject: string
+    html: string
+    text?: string
+    from?: string
+  }): Promise<EmailResult> {
+    const from = options.from || this.fromEmail
+
     try {
-      const { to, subject, html, text, from } = options
-      const fromEmail = from || this.fromEmail
-
-      logger.log(`📧 Email: Sending to ${to} via ${this.provider}`)
-
-      switch (this.provider) {
-        case "resend":
-          return await this.sendViaResend(to, subject, html, text, fromEmail)
-
-        case "sendgrid":
-          return await this.sendViaSendGrid(to, subject, html, text, fromEmail)
-
-        case "smtp":
-          return await this.sendViaSMTP(to, subject, html, text, fromEmail)
-
-        default:
-          throw new Error(`Unknown provider: ${this.provider}`)
+      if (this.provider === "resend") {
+        return await this.sendViaResend(from, options)
+      } else if (this.provider === "smtp") {
+        return await this.sendViaSMTP(from, options)
+      } else {
+        throw new Error(`Unknown provider: ${this.provider}`)
       }
     } catch (error) {
-      logger.error("❌ Email: Failed to send", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error"
+      const msg = error instanceof Error ? error.message : String(error)
+      logger.error(`❌ Email: Send failed`, msg)
+      return { success: false, error: msg }
+    }
+  }
+
+  private async sendViaResend(from: string, options: any): Promise<EmailResult> {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      return { success: false, error: "RESEND_API_KEY not configured" }
+    }
+
+    try {
+      // Use fetch to call Resend API directly (avoids SDK import issues)
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          from,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+          text: options.text || options.html.replace(/<[^>]*>/g, "")
+        })
+      })
+
+      const data = (await response.json()) as any
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.message || `HTTP ${response.status}`
+        }
       }
+
+      logger.log(`✅ Email: Sent via Resend to ${options.to}`)
+      return {
+        success: true,
+        messageId: data.id
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      logger.error(`❌ Email: Resend error`, msg)
+      return { success: false, error: msg }
     }
   }
 
-  private async sendViaResend(
-    to: string,
-    subject: string,
-    html: string,
-    text: string | undefined,
-    from: string
-  ) {
-    if (!this.resend) throw new Error("Resend not initialized")
-
-    const response = await this.resend.emails.send({
-      from,
-      to,
-      subject,
-      html,
-      text
-    })
-
-    if (response.error) {
-      throw new Error(response.error.message)
+  private async sendViaSMTP(from: string, options: any): Promise<EmailResult> {
+    if (!this.smtpTransporter) {
+      return { success: false, error: "SMTP not configured" }
     }
 
-    logger.log(`✅ Email: Sent via Resend, message ID: ${response.data.id}`)
-    return {
-      success: true,
-      messageId: response.data.id
+    try {
+      const info = await this.smtpTransporter.sendMail({
+        from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text || options.html.replace(/<[^>]*>/g, "")
+      })
+
+      logger.log(`✅ Email: Sent via SMTP to ${options.to}`)
+      return { success: true, messageId: info.messageId }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      logger.error(`❌ Email: SMTP error`, msg)
+      return { success: false, error: msg }
     }
   }
 
-  private async sendViaSendGrid(
-    to: string,
-    subject: string,
-    html: string,
-    text: string | undefined,
-    from: string
-  ) {
-    if (!this.resend) throw new Error("SendGrid not initialized")
-
-    const response = await this.resend.send({
-      to,
-      from,
-      subject,
-      html,
-      text
-    })
-
-    // SendGrid returns array with response object
-    const result = Array.isArray(response) ? response[0] : response
-    if (result.statusCode && result.statusCode >= 400) {
-      throw new Error(`SendGrid error: ${result.statusCode}`)
-    }
-
-    logger.log(`✅ Email: Sent via SendGrid`)
-    return {
-      success: true,
-      messageId: result.headers?.["x-message-id"] || "unknown"
-    }
-  }
-
-  private async sendViaSMTP(
-    to: string,
-    subject: string,
-    html: string,
-    text: string | undefined,
-    from: string
-  ) {
-    if (!this.transporter) throw new Error("SMTP not initialized")
-
-    const info = await this.transporter.sendMail({
-      from,
-      to,
-      subject,
-      html,
-      text: text || html.replace(/<[^>]*>/g, "")
-    })
-
-    logger.log(`✅ Email: Sent via SMTP, message ID: ${info.messageId}`)
-    return {
-      success: true,
-      messageId: info.messageId
-    }
-  }
-
-  /**
-   * Send OTP email for authentication
-   */
-  async sendOTP(email: string, otp: string, type: "login" | "signup" = "login") {
-    const subject = type === "signup" ? "Verify your JustQuick account" : "Your JustQuick login code"
-
+  async sendOTP(email: string, otp: string, type: "login" | "signup" = "login"): Promise<EmailResult> {
     const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .logo { font-size: 24px; font-weight: bold; color: #10b981; }
-    .content { background: #f9fafb; border-radius: 8px; padding: 30px; text-align: center; }
-    .otp-code { 
-      font-size: 32px; 
-      font-weight: bold; 
-      color: #10b981; 
-      letter-spacing: 4px;
-      margin: 20px 0;
-      font-family: 'Courier New', monospace;
-    }
-    .footer { 
-      text-align: center; 
-      margin-top: 30px; 
-      font-size: 12px; 
-      color: #6b7280; 
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">JustQuick 🚀</div>
-      <p style="color: #6b7280;">Delivery App</p>
-    </div>
-    
-    <div class="content">
-      <h2>Your Login Code</h2>
-      <p>Enter this code to ${type === "signup" ? "verify your account" : "log in to JustQuick"}:</p>
-      <div class="otp-code">${otp}</div>
-      <p style="color: #6b7280; font-size: 14px;">This code expires in 10 minutes</p>
-    </div>
-    
-    <div class="footer">
-      <p>Don't share this code with anyone. JustQuick team will never ask for your code.</p>
-      <p>&copy; 2026 JustQuick Delivery. All rights reserved.</p>
-    </div>
-  </div>
-</body>
-</html>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center; border-radius: 8px 8px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">JustQuick</h1>
+          <p style="color: #ecfdf5; margin: 8px 0 0 0;">Your ${type === "signup" ? "Registration" : "Login"} Code</p>
+        </div>
+        
+        <div style="padding: 40px; background: #ffffff; border: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; margin: 0 0 24px 0;">
+            ${type === "signup" ? "Welcome! Use this code to complete registration:" : "Use this code to log in:"}
+          </p>
+          
+          <div style="background: #f3f4f6; border: 2px solid #10b981; border-radius: 8px; padding: 30px; text-align: center; margin: 24px 0;">
+            <p style="color: #6b7280; font-size: 12px; margin: 0 0 12px 0;">Enter this code</p>
+            <div style="font-size: 48px; font-weight: bold; color: #059669; letter-spacing: 4px; font-family: monospace;">
+              ${otp}
+            </div>
+            <p style="color: #6b7280; font-size: 12px; margin: 12px 0 0 0;">Valid for 10 minutes</p>
+          </div>
+          
+          <p style="color: #9ca3af; font-size: 12px; margin: 24px 0 0 0;">
+            Never share this code with anyone.
+          </p>
+        </div>
+        
+        <div style="background: #f9fafb; padding: 20px; text-align: center; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; font-size: 12px; color: #6b7280;">
+          JustQuick © ${new Date().getFullYear()}
+        </div>
+      </div>
     `
 
     return this.send({
       to: email,
-      subject,
+      subject: `Your JustQuick ${type === "signup" ? "Registration" : "Login"} Code`,
       html,
-      text: `Your JustQuick login code: ${otp}`
+      text: `Your JustQuick ${type === "signup" ? "registration" : "login"} code: ${otp}\n\nValid for 10 minutes.\n\nDo not share this code.`
     })
   }
 
-  /**
-   * Send email verification link
-   */
-  async sendVerificationEmail(email: string, verificationUrl: string) {
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .logo { font-size: 24px; font-weight: bold; color: #10b981; }
-    .content { background: #f9fafb; border-radius: 8px; padding: 30px; text-align: center; }
-    .button {
-      display: inline-block;
-      background: #10b981;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 6px;
-      text-decoration: none;
-      margin: 20px 0;
-      font-weight: 500;
-    }
-    .footer { 
-      text-align: center; 
-      margin-top: 30px; 
-      font-size: 12px; 
-      color: #6b7280; 
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">JustQuick 🚀</div>
-      <p style="color: #6b7280;">Delivery App</p>
-    </div>
-    
-    <div class="content">
-      <h2>Verify Your Email</h2>
-      <p>Click the button below to verify your email address and complete your signup:</p>
-      <a href="${verificationUrl}" class="button">Verify Email</a>
-      <p style="color: #6b7280; font-size: 14px;">Link expires in 24 hours</p>
-      <p style="color: #6b7280; font-size: 12px;">Or paste this link: <br>${verificationUrl}</p>
-    </div>
-    
-    <div class="footer">
-      <p>If you didn't request this, you can safely ignore this email.</p>
-      <p>&copy; 2026 JustQuick Delivery. All rights reserved.</p>
-    </div>
-  </div>
-</body>
-</html>
-    `
-
+  async sendVerificationEmail(email: string, verificationUrl: string): Promise<EmailResult> {
     return this.send({
       to: email,
-      subject: "Verify your JustQuick email",
-      html,
-      text: `Click here to verify your email: ${verificationUrl}`
+      subject: "Verify Your JustQuick Email",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #10b981; padding: 40px; text-align: center; color: white; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">JustQuick</h1>
+          </div>
+          <div style="padding: 40px; background: white; border: 1px solid #e5e7eb;">
+            <h2 style="color: #1f2937; margin: 0 0 16px 0;">Verify Your Email</h2>
+            <p style="color: #6b7280;">Click the button below to verify your email:</p>
+            <a href="${verificationUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; margin: 24px 0;">
+              Verify Email
+            </a>
+          </div>
+        </div>
+      `
     })
   }
 
-  /**
-   * Send password reset email
-   */
-  async sendPasswordResetEmail(email: string, resetUrl: string) {
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .logo { font-size: 24px; font-weight: bold; color: #10b981; }
-    .content { background: #f9fafb; border-radius: 8px; padding: 30px; text-align: center; }
-    .button {
-      display: inline-block;
-      background: #10b981;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 6px;
-      text-decoration: none;
-      margin: 20px 0;
-      font-weight: 500;
-    }
-    .warning { color: #dc2626; font-size: 12px; margin-top: 20px; }
-    .footer { 
-      text-align: center; 
-      margin-top: 30px; 
-      font-size: 12px; 
-      color: #6b7280; 
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">JustQuick 🚀</div>
-      <p style="color: #6b7280;">Delivery App</p>
-    </div>
-    
-    <div class="content">
-      <h2>Reset Your Password</h2>
-      <p>Click the button below to reset your password:</p>
-      <a href="${resetUrl}" class="button">Reset Password</a>
-      <p style="color: #6b7280; font-size: 14px;">Link expires in 1 hour</p>
-      <p class="warning">⚠️ If you didn't request this, your account may be at risk. Please change your password immediately.</p>
-    </div>
-    
-    <div class="footer">
-      <p>&copy; 2026 JustQuick Delivery. All rights reserved.</p>
-    </div>
-  </div>
-</body>
-</html>
-    `
-
+  async sendPasswordResetEmail(email: string, resetUrl: string): Promise<EmailResult> {
     return this.send({
       to: email,
-      subject: "Reset your JustQuick password",
-      html,
-      text: `Click here to reset your password: ${resetUrl}`
+      subject: "Reset Your JustQuick Password",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #10b981; padding: 40px; text-align: center; color: white; border-radius: 8px 8px 0 0;">
+            <h1 style="margin: 0;">JustQuick</h1>
+          </div>
+          <div style="padding: 40px; background: white; border: 1px solid #e5e7eb;">
+            <h2 style="color: #1f2937; margin: 0 0 16px 0;">Reset Your Password</h2>
+            <p style="color: #6b7280;">Click below to reset your password:</p>
+            <a href="${resetUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; margin: 24px 0;">
+              Reset Password
+            </a>
+            <p style="color: #9ca3af; font-size: 12px; margin: 24px 0 0 0;">This link expires in 24 hours.</p>
+          </div>
+        </div>
+      `
     })
   }
 }
 
-// Singleton instance
-let emailService: EmailService | null = null
+let instance: EmailService | null = null
 
 export function getEmailService(): EmailService {
-  if (!emailService) {
-    emailService = new EmailService()
+  if (!instance) {
+    instance = new EmailService()
   }
-  return emailService
+  return instance
 }
 
-export default EmailService
+export { EmailService }

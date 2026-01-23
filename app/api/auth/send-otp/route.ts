@@ -1,25 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServer } from "@/lib/supabase/server"
-import { getEmailService } from "@/lib/email/email-service"
 import { logger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
 
 /**
  * POST /api/auth/send-otp
- * Send OTP to email for authentication
+ * Send OTP/Magic Link to email using Supabase Auth
  * 
- * FLOW:
- * 1. Client sends email
- * 2. Generate OTP 
- * 3. Store OTP temporarily (optional - for verification)
- * 4. Send via SMTP/email service (bypasses Supabase rate limits)
- * 
- * REQUEST:
- * {
- *   "email": "user@example.com",
- *   "type": "login" | "signup"  (optional, default: "login")
- * }
+ * Uses Supabase's built-in authentication email service
  */
 export async function POST(request: NextRequest) {
   try {
@@ -37,62 +26,35 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = email.toLowerCase().trim()
     logger.log(`📧 OTP: Sending to ${normalizedEmail} (type: ${type})`)
 
-    // Generate 6-digit OTP
-    const otp = generateOTP()
-    logger.log(`🔑 OTP: Generated code for ${normalizedEmail}`)
-
-    // Store OTP in database (optional - for verification later)
+    // Use Supabase Auth to send magic link
     const supabase = await getSupabaseServer()
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    
+    const { error } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_API_URL}/auth/callback`,
+        shouldCreateUser: type === "signup"
+      }
+    })
 
-    // Try to store OTP in database for verification
-    const { error: insertError } = await supabase
-      .from("otp_codes")
-      .upsert(
-        {
-          email: normalizedEmail,
-          code: otp,
-          expires_at: expiresAt.toISOString(),
-          created_at: new Date().toISOString(),
-          type,
-          used: false
-        },
-        {
-          onConflict: "email"
-        }
-      )
-
-    if (insertError && insertError.code !== "PGRST116") {
-      logger.warn(
-        "⚠️ OTP: Could not store OTP in database",
-        insertError.message
-      )
-      // Continue - we'll send email anyway
-    }
-
-    // Send OTP via email service (bypasses Supabase rate limits)
-    const emailService = getEmailService()
-    const emailResult = await emailService.sendOTP(normalizedEmail, otp, type)
-
-    if (!emailResult.success) {
-      logger.error("❌ OTP: Failed to send email", emailResult.error)
+    if (error) {
+      logger.error("❌ OTP: Supabase error", error.message)
       return NextResponse.json(
         { 
-          error: "Failed to send OTP email", 
-          details: emailResult.error 
+          error: "Failed to send OTP",
+          details: error.message
         },
         { status: 500 }
       )
     }
 
-    logger.log(`✅ OTP: Successfully sent to ${normalizedEmail}`)
+    logger.log(`✅ OTP: Magic link sent to ${normalizedEmail}`)
 
     return NextResponse.json({
       success: true,
-      message: `OTP sent to ${normalizedEmail}`,
-      // Only expose partial email for security
+      message: `Magic link sent to ${normalizedEmail}`,
       maskedEmail: maskEmail(normalizedEmail),
-      expiresIn: 600 // 10 minutes in seconds
+      expiresIn: 3600 // 1 hour
     })
   } catch (error) {
     logger.error("❌ OTP: Request failed", error)
@@ -101,13 +63,6 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
-
-/**
- * Generate a 6-digit OTP code
- */
-function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
 /**
