@@ -352,6 +352,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
 
       // Step 2: Update profiles table (PRIMARY - must succeed)
+      // NOTE: Email is NOT stored in profiles - it's in auth.users table
       logger.log(`📝 Cart: Updating profiles table for user ${userId}...`)
       
       const { data: updateResult, error: profileError } = await supabase
@@ -360,7 +361,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
           name: buyerData.name,
           phone: buyerData.phone,
           address: buyerData.address,
-          email: buyerData.email,
           updated_at: new Date().toISOString()
         })
         .eq('id', userId) // CRITICAL: Match on authenticated user ID
