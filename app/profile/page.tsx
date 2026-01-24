@@ -57,11 +57,12 @@ export default function ProfilePage() {
     setSuccess(false)
 
     try {
+      const startTime = Date.now()
       logger.log("📝 Profile: Starting save operation...")
 
-      // Add timeout to prevent infinite hanging
+      // Add timeout to prevent infinite hanging (30 seconds)
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Profile save took too long. Please try again.")), 15000)
+        setTimeout(() => reject(new Error("Profile save took too long. Please try again.")), 30000)
       )
 
       // STEP 1: Update buyer profile in Supabase
@@ -95,6 +96,7 @@ export default function ProfilePage() {
       // Give React time to update the component tree and show success
       await new Promise(resolve => setTimeout(resolve, 1000))
       
+      const totalTime = Date.now() - startTime
       logger.log("🔙 Profile: Navigating back to checkout...")
       router.back()
 
@@ -109,7 +111,6 @@ export default function ProfilePage() {
       
       logger.error("⚠️ Profile: Error shown to user:", errorMessage)
     } finally {
-      // CRITICAL: Always reset loading state, even on error
       setSaving(false)
       logger.log("🏁 Profile: Save operation complete (success or error)")
     }
