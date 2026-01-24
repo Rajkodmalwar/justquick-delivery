@@ -305,21 +305,37 @@ export function CartProvider({ children }: { children: ReactNode }) {
   /**
    * UPDATE BUYER PROFILE: Sync buyer info to Supabase and localStorage
    * 
+   * CRITICAL NOTES:
+   * 1. Uses auth.user.id (logged-in user) not buyerData.id
+   * 2. Updates profiles table with RLS restrictions
+   * 3. Returns success/error clearly to UI
+   * 4. Does NOT throw on metadata-only failures
+   * 
    * Called when user edits their profile (name, phone, address).
    * Updates BOTH Supabase (source of truth) and localStorage (cache).
-   * Separated from cart operations - doesn't affect cart items.
    */
   const handleSetBuyer = useCallback(async (buyerData: Buyer) => {
     try {
-      // Ensure user is authenticated
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) {
-        logger.warn("⚠️ Cart: Cannot set buyer - not authenticated")
-        return // Guest users cannot set profile
-      }
-      const user = session.user
+      logger.log("📝 Cart: Starting profile update...")
 
-      // Update user metadata
+      // CRITICAL: Get authenticated user's session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError) {
+        logger.error("❌ Cart: Session fetch error", sessionError.message)
+        throw new Error(`Session error: ${sessionError.message}`)
+      }
+
+      if (!session?.user?.id) {
+        logger.error("❌ Cart: No authenticated user")
+        throw new Error("Not authenticated. Please log in again.")
+      }
+
+      const userId = session.user.id
+      logger.log(`✅ Cart: Got authenticated user ID: ${userId}`)
+
+      // Step 1: Update auth user metadata (optional, may fail silently)
+      logger.log("📝 Cart: Updating auth metadata...")
       const { error: metadataError } = await supabase.auth.updateUser({
         data: {
           name: buyerData.name,
@@ -329,37 +345,63 @@ export function CartProvider({ children }: { children: ReactNode }) {
       })
 
       if (metadataError) {
-        logger.error("❌ Cart: Metadata update failed", metadataError)
-        throw metadataError
+        logger.warn("⚠️ Cart: Auth metadata update failed (non-critical)", metadataError.message)
+        // Don't throw - metadata is secondary to database profile
+      } else {
+        logger.log("✅ Cart: Auth metadata updated")
       }
 
-      // Update profiles table (source of truth)
-      const { error: profileError } = await supabase
+      // Step 2: Update profiles table (PRIMARY - must succeed)
+      logger.log(`📝 Cart: Updating profiles table for user ${userId}...`)
+      
+      const { data: updateResult, error: profileError } = await supabase
         .from('profiles')
-        .upsert({
-          id: buyerData.id,
+        .update({
           name: buyerData.name,
           phone: buyerData.phone,
           address: buyerData.address,
           email: buyerData.email,
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'id'
         })
+        .eq('id', userId) // CRITICAL: Match on authenticated user ID
+        .select('*')
+        .single()
 
       if (profileError) {
-        logger.warn("⚠️ Cart: Profiles table update failed", profileError.message)
+        logger.error("❌ Cart: Profile update failed - RLS or DB issue", {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        })
+        
+        // Provide clear error message
+        if (profileError.code === 'PGRST116') {
+          throw new Error("No profile found. Try logging out and back in.")
+        } else if (profileError.code === '42P01') {
+          throw new Error("Profile table missing columns. Contact admin.")
+        } else {
+          throw new Error(`Failed to update profile: ${profileError.message}`)
+        }
       }
 
-      // Update local state
+      logger.log("✅ Cart: Profile updated in database", updateResult)
+
+      // Step 3: Update local React state
+      logger.log("📝 Cart: Updating local state...")
       setBuyer(buyerData)
       
-      // Cache in localStorage
+      // Step 4: Cache in localStorage for offline support
+      logger.log("📝 Cart: Caching in localStorage...")
       localStorage.setItem("jq_buyer", JSON.stringify(buyerData))
       
-      logger.log("✅ Cart: Buyer info updated and synced")
-    } catch (error) {
-      logger.error("❌ Cart: Error updating buyer", error)
+      logger.log("✅ Cart: Profile update complete - all data synced")
+    } catch (error: any) {
+      logger.error("❌ Cart: Profile update failed", {
+        message: error.message,
+        error: error
+      })
+      // Re-throw so profile page can show error
       throw error
     }
   }, [])

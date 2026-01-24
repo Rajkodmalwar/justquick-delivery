@@ -40,6 +40,7 @@ export default function ProfilePage() {
   }, [buyer, isAuthenticated, isLoading, router])
 
   const handleSave = async () => {
+    // Validation
     if (!phone.trim()) {
       setError("Phone number is required")
       return
@@ -50,11 +51,16 @@ export default function ProfilePage() {
       return
     }
 
+    // Start loading
     setSaving(true)
     setError("")
+    setSuccess(false)
 
     try {
-      // Update buyer via cart context (which handles all Supabase updates)
+      logger.log("📝 Profile: Starting save operation...")
+
+      // STEP 1: Update buyer profile in Supabase
+      logger.log("📝 Profile: Calling setBuyer() to update Supabase...")
       await setBuyer({
         id: buyer?.id || "",
         name: name.trim() || "User",
@@ -63,27 +69,38 @@ export default function ProfilePage() {
         address: address.trim()
       })
       
-      logger.log("✅ Profile saved to Supabase")
+      logger.log("✅ Profile: Profile saved to Supabase successfully")
 
-      // Refresh user data to ensure buyer state is synced correctly
-      logger.log("🔄 Refreshing buyer state from database...")
+      // STEP 2: Refresh buyer data to ensure local state matches database
+      logger.log("🔄 Profile: Calling refreshUser() to sync database data...")
       await refreshUser()
       
-      logger.log("✅ Buyer state refreshed, showing success message")
+      logger.log("✅ Profile: Buyer state refreshed from database")
 
+      // STEP 3: Show success and redirect
+      logger.log("✅ Profile: Showing success message...")
       setSuccess(true)
       
-      // Give React time to update the component tree before navigating
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Give React time to update the component tree and show success
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
-      logger.log("🔙 Navigating back...")
+      logger.log("🔙 Profile: Navigating back to checkout...")
       router.back()
 
     } catch (err: any) {
-      logger.error("❌ Profile save error:", err)
-      setError(err.message || "Failed to save profile")
+      logger.error("❌ Profile: Save operation failed", err)
+      
+      // Extract error message
+      const errorMessage = err?.message || "Failed to save profile"
+      
+      setError(errorMessage)
+      setSuccess(false)
+      
+      logger.error("⚠️ Profile: Error shown to user:", errorMessage)
     } finally {
+      // CRITICAL: Always reset loading state, even on error
       setSaving(false)
+      logger.log("🏁 Profile: Save operation complete (success or error)")
     }
   }
 
