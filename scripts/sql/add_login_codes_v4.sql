@@ -1,3 +1,4 @@
+-- PostgreSQL Migration
 -- Add 6-digit numeric login codes for vendors and delivery boys
 -- Run this migration to add the login_code column
 

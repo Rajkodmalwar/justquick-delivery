@@ -1,3 +1,4 @@
+-- PostgreSQL Migration
 -- Add delivery_cost to orders table
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_cost numeric DEFAULT 0;
 

@@ -1,3 +1,4 @@
+-- PostgreSQL Migration
 -- Add new columns to shops table for detailed shop info
 ALTER TABLE public.shops 
 ADD COLUMN IF NOT EXISTS address text,

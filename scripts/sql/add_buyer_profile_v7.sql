@@ -1,3 +1,4 @@
+-- PostgreSQL Migration
 -- ====================================================
 -- MIGRATION: Add buyer profile columns and fix RLS
 -- Purpose: Enable users to save name, phone, address

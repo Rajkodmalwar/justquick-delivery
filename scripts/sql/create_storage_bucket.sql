@@ -1,3 +1,4 @@
+-- PostgreSQL Migration
 -- Note: Supabase Storage buckets must be created via the Supabase dashboard or API
 -- This is a reference for the bucket configuration needed
 
