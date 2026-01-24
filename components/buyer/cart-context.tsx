@@ -310,17 +310,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
    * 2. Updates profiles table with RLS restrictions
    * 3. Returns success/error clearly to UI
    * 4. Does NOT throw on metadata-only failures
+   * 5. NO select() on update - just update and return
    * 
    * Called when user edits their profile (name, phone, address).
    * Updates BOTH Supabase (source of truth) and localStorage (cache).
    */
   const handleSetBuyer = useCallback(async (buyerData: Buyer) => {
+    const startTime = Date.now()
     try {
-      logger.log("📝 Cart: Starting profile update...")
+      logger.log("📝 Cart: Starting profile update...", { buyerData })
 
       // CRITICAL: Get authenticated user's session
+      logger.log("📝 Cart: Fetching session...")
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
+      const sessionFetchTime = Date.now() - startTime
+      logger.log(`⏱️ Cart: Session fetch took ${sessionFetchTime}ms`)
+
       if (sessionError) {
         logger.error("❌ Cart: Session fetch error", sessionError.message)
         throw new Error(`Session error: ${sessionError.message}`)
@@ -336,6 +342,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       // Step 1: Update auth user metadata (optional, may fail silently)
       logger.log("📝 Cart: Updating auth metadata...")
+      const metadataStartTime = Date.now()
       const { error: metadataError } = await supabase.auth.updateUser({
         data: {
           name: buyerData.name,
@@ -343,6 +350,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           address: buyerData.address
         }
       })
+      const metadataTime = Date.now() - metadataStartTime
+      logger.log(`⏱️ Cart: Metadata update took ${metadataTime}ms`)
 
       if (metadataError) {
         logger.warn("⚠️ Cart: Auth metadata update failed (non-critical)", metadataError.message)
@@ -354,8 +363,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Step 2: Update profiles table (PRIMARY - must succeed)
       // NOTE: Email is NOT stored in profiles - it's in auth.users table
       logger.log(`📝 Cart: Updating profiles table for user ${userId}...`)
+      const updateStartTime = Date.now()
       
-      const { data: updateResult, error: profileError } = await supabase
+      const { error: profileError, status, statusText } = await supabase
         .from('profiles')
         .update({
           name: buyerData.name,
@@ -364,15 +374,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
           updated_at: new Date().toISOString()
         })
         .eq('id', userId) // CRITICAL: Match on authenticated user ID
-        .select('*')
-        .single()
+
+      const updateTime = Date.now() - updateStartTime
+      logger.log(`⏱️ Cart: DB update took ${updateTime}ms`, { status, statusText })
 
       if (profileError) {
         logger.error("❌ Cart: Profile update failed - RLS or DB issue", {
           code: profileError.code,
           message: profileError.message,
           details: profileError.details,
-          hint: profileError.hint
+          hint: profileError.hint,
+          status,
+          statusText
         })
         
         // Provide clear error message
@@ -380,12 +393,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
           throw new Error("No profile found. Try logging out and back in.")
         } else if (profileError.code === '42P01') {
           throw new Error("Profile table missing columns. Contact admin.")
+        } else if (profileError.code === '42501') {
+          throw new Error("Permission denied. You don't have access to update your profile. Try logging out and back in.")
         } else {
           throw new Error(`Failed to update profile: ${profileError.message}`)
         }
       }
 
-      logger.log("✅ Cart: Profile updated in database", updateResult)
+      logger.log("✅ Cart: Profile updated in database successfully")
 
       // Step 3: Update local React state
       logger.log("📝 Cart: Updating local state...")
@@ -395,11 +410,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       logger.log("📝 Cart: Caching in localStorage...")
       localStorage.setItem("jq_buyer", JSON.stringify(buyerData))
       
-      logger.log("✅ Cart: Profile update complete - all data synced")
+      const totalTime = Date.now() - startTime
+      logger.log(`✅ Cart: Profile update complete in ${totalTime}ms - all data synced`)
     } catch (error: any) {
       logger.error("❌ Cart: Profile update failed", {
         message: error.message,
-        error: error
+        error: error,
+        duration: Date.now() - startTime
       })
       // Re-throw so profile page can show error
       throw error

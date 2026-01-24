@@ -59,21 +59,32 @@ export default function ProfilePage() {
     try {
       logger.log("📝 Profile: Starting save operation...")
 
+      // Add timeout to prevent infinite hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Profile save took too long. Please try again.")), 15000)
+      )
+
       // STEP 1: Update buyer profile in Supabase
       logger.log("📝 Profile: Calling setBuyer() to update Supabase...")
-      await setBuyer({
-        id: buyer?.id || "",
-        name: name.trim() || "User",
-        email: buyer?.email || "",
-        phone: phone.trim(),
-        address: address.trim()
-      })
+      await Promise.race([
+        setBuyer({
+          id: buyer?.id || "",
+          name: name.trim() || "User",
+          email: buyer?.email || "",
+          phone: phone.trim(),
+          address: address.trim()
+        }),
+        timeoutPromise
+      ])
       
       logger.log("✅ Profile: Profile saved to Supabase successfully")
 
       // STEP 2: Refresh buyer data to ensure local state matches database
       logger.log("🔄 Profile: Calling refreshUser() to sync database data...")
-      await refreshUser()
+      await Promise.race([
+        refreshUser(),
+        timeoutPromise
+      ])
       
       logger.log("✅ Profile: Buyer state refreshed from database")
 
@@ -91,7 +102,7 @@ export default function ProfilePage() {
       logger.error("❌ Profile: Save operation failed", err)
       
       // Extract error message
-      const errorMessage = err?.message || "Failed to save profile"
+      const errorMessage = err?.message || "Failed to save profile. Please try again."
       
       setError(errorMessage)
       setSuccess(false)
