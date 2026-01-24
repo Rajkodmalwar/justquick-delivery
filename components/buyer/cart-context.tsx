@@ -362,21 +362,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       // Step 2: Update profiles table (PRIMARY - must succeed)
       // NOTE: Email is NOT stored in profiles - it's in auth.users table
-      logger.log(`📝 Cart: Updating profiles table for user ${userId}...`)
+      logger.log(`📝 Cart: Upserting profile for user ${userId}...`)
       const updateStartTime = Date.now()
       
+      // Use UPSERT to create profile if it doesn't exist, or update if it does
       const { error: profileError, status, statusText } = await supabase
         .from('profiles')
-        .update({
-          name: buyerData.name,
-          phone: buyerData.phone,
-          address: buyerData.address,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId) // CRITICAL: Match on authenticated user ID
+        .upsert(
+          {
+            id: userId, // CRITICAL: Use authenticated user ID as primary key
+            name: buyerData.name,
+            phone: buyerData.phone,
+            address: buyerData.address,
+            updated_at: new Date().toISOString()
+            // role will default to 'buyer' if this is a new row (from DB default)
+          },
+          {
+            onConflict: 'id' // If profile already exists, update it
+          }
+        )
 
       const updateTime = Date.now() - updateStartTime
-      logger.log(`⏱️ Cart: DB update took ${updateTime}ms`, { status, statusText })
+      logger.log(`⏱️ Cart: DB upsert took ${updateTime}ms`, { status, statusText })
 
       if (profileError) {
         logger.error("❌ Cart: Profile update failed - RLS or DB issue", {
