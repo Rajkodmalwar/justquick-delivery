@@ -212,7 +212,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setIsAdminUser(authIsAdmin)
     } else if (user && !profile) {
       // User exists but profile is still loading
-      // CRITICAL: Check localStorage fallback instead of clearing buyer
+      // CRITICAL: Don't clear buyer - wait for profile or use localStorage fallback
       logger.warn("⏳ Cart: User exists but profile still loading", {
         user_id: user.id,
         user_email: user.email
@@ -245,11 +245,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
           setIsAdminUser(false)
         }
       } else {
-        // No localStorage fallback - wait for profile or clear if it's been too long
-        logger.warn("⚠️ Cart: No localStorage fallback and profile missing")
-        setBuyer(null)
-        localStorage.removeItem("jq_buyer")
-        setIsAdminUser(false)
+        // No localStorage fallback - for new users, create temporary buyer from user
+        // This will be updated when profile loads
+        logger.warn("⏳ Cart: No localStorage - creating temporary buyer from user", {
+          user_id: user.id,
+          user_email: user.email
+        })
+        
+        // Create buyer from user data while we wait for profile
+        const tempBuyer: Buyer = {
+          id: user.id,
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          phone: user.user_metadata?.phone || '',
+          address: user.user_metadata?.address || '',
+          role: 'buyer'
+        }
+        setBuyer(tempBuyer)
+        setIsAdminUser(authIsAdmin)
+        
+        // When profile loads, this effect will run again and update buyer with profile data
+        logger.log("📦 Cart: Created temporary buyer - will update when profile loads", tempBuyer)
       }
     } else {
       // User is not authenticated
