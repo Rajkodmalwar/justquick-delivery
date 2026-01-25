@@ -51,6 +51,13 @@ export default function ProfilePage() {
       return
     }
 
+    // CRITICAL: Ensure buyer ID exists before attempting save
+    if (!buyer?.id) {
+      setError("User ID not found. Please log out and log back in.")
+      logger.error("❌ Profile: Missing buyer.id - cannot save")
+      return
+    }
+
     // Start loading
     setSaving(true)
     setError("")
@@ -60,20 +67,26 @@ export default function ProfilePage() {
       const startTime = Date.now()
       logger.log("📝 Profile: Starting save operation...")
 
-      // Add timeout to prevent infinite hanging (15 seconds total)
-      const timeoutMs = 15000
+      // Add timeout to prevent infinite hanging (30 seconds per step)
+      const timeoutMs = 30000
       const startTimeout = () => new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error("Profile save took too long. Please try again.")), timeoutMs)
       )
 
       // STEP 1: Update buyer profile in Supabase
       logger.log("📝 Profile: Calling setBuyer() to update Supabase...")
+      
+      // Validate we have required data
+      if (!buyer?.id) {
+        throw new Error("User ID not found. Please log out and log back in.")
+      }
+
       try {
         await Promise.race([
           setBuyer({
-            id: buyer?.id || "",
+            id: buyer.id, // CRITICAL: Use buyer ID from cart context
             name: name.trim() || "User",
-            email: buyer?.email || "",
+            email: buyer.email || "",
             phone: phone.trim(),
             address: address.trim()
           }),
@@ -102,11 +115,15 @@ export default function ProfilePage() {
       logger.log("✅ Profile: Showing success message...")
       setSuccess(true)
       
-      // Give user 1 second to see success message
+      // Give React time to render success message AND ensure Supabase state is synced
+      // Longer delay in production to ensure no race conditions
       await new Promise(resolve => setTimeout(resolve, 1000))
       
       const totalTime = Date.now() - startTime
       logger.log(`🔙 Profile: Redirecting back (took ${totalTime}ms total)...`)
+      
+      // Longer delay before redirect to ensure all state updates are flushed and Supabase sync complete
+      await new Promise(resolve => setTimeout(resolve, 800))
       
       // Use router.back() to return to previous page
       router.back()

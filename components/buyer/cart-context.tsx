@@ -320,24 +320,50 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       logger.log("📝 Cart: Starting profile update...", { buyerData })
 
-      // CRITICAL: Get authenticated user's session
+      // CRITICAL: Get authenticated user's session with retry logic
       logger.log("📝 Cart: Fetching session...")
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
-      const sessionFetchTime = Date.now() - startTime
-      logger.log(`⏱️ Cart: Session fetch took ${sessionFetchTime}ms`)
+      let session = null
+      let attempts = 0
+      const maxAttempts = 3
 
-      if (sessionError) {
-        logger.error("❌ Cart: Session fetch error", sessionError.message)
-        throw new Error(`Session error: ${sessionError.message}`)
+      // Retry session fetch up to 3 times (session might not be loaded yet in production)
+      while (!session && attempts < maxAttempts) {
+        attempts++
+        logger.log(`📝 Cart: Session fetch attempt ${attempts}/${maxAttempts}...`)
+        
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          logger.error(`❌ Cart: Session fetch error (attempt ${attempts})`, sessionError.message)
+          if (attempts === maxAttempts) {
+            throw new Error(`Session error after ${maxAttempts} attempts: ${sessionError.message}`)
+          }
+          // Wait 500ms before retrying
+          await new Promise(resolve => setTimeout(resolve, 500))
+          continue
+        }
+
+        if (currentSession?.user?.id) {
+          session = currentSession
+          logger.log(`✅ Cart: Session retrieved on attempt ${attempts}`)
+          break
+        } else if (attempts < maxAttempts) {
+          logger.warn(`⚠️ Cart: No session on attempt ${attempts}, retrying...`)
+          // Wait 500ms before retrying
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
       }
 
+      const sessionFetchTime = Date.now() - startTime
+      logger.log(`⏱️ Cart: Session fetch took ${sessionFetchTime}ms after ${attempts} attempt(s)`)
+
       if (!session?.user?.id) {
-        logger.error("❌ Cart: No authenticated user")
+        logger.error("❌ Cart: No authenticated user after all attempts")
         throw new Error("Not authenticated. Please log in again.")
       }
 
       const userId = session.user.id
+      logger.log(`✅ Cart: Got authenticated user ID: ${userId}`)
       logger.log(`✅ Cart: Got authenticated user ID: ${userId}`)
 
       // Step 1: Update auth user metadata (optional, may fail silently)
