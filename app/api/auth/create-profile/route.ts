@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { getSupabaseServer } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 
@@ -8,14 +8,14 @@ import { logger } from '@/lib/logger'
  * This endpoint provides a reliable fallback for profile creation when
  * client-side creation fails due to RLS, permissions, or race conditions.
  * 
- * Uses server-side Supabase client with service role to bypass RLS if needed.
+ * Uses server-side Supabase client with user session.
  */
 export async function POST(request: Request) {
   try {
     logger.log("📝 [Server] Profile creation endpoint called")
     
     // Get authenticated user from session
-    const supabase = await createClient()
+    const supabase = await getSupabaseServer()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
