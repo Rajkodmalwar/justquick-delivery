@@ -9,8 +9,7 @@ SELECT
   COUNT(*) as profiles_to_fix,
   COUNT(CASE WHEN full_name IS NOT NULL AND name IS NULL THEN 1 END) as need_migration
 FROM public.profiles
-WHERE (full_name IS NOT NULL AND name IS NULL) 
-   OR (full_name IS NOT NULL AND name IS NULL);
+WHERE full_name IS NOT NULL AND name IS NULL;
 
 -- Step 2: Migrate full_name → name for profiles that need it
 UPDATE public.profiles

@@ -102,7 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const newProfile = {
           id: userId,
           role: "buyer",
-          name: user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? "User",
+          name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email?.split('@')[0] ?? "User",
+          email: user.email ?? "",
           phone: user.user_metadata?.phone ?? "",
           address: user.user_metadata?.address ?? "",
           updated_at: new Date().toISOString()
@@ -116,10 +117,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .single()
 
         if (createError) {
-          logger.error("❌ Failed to create profile:", createError.message)
+          logger.error("❌ Failed to create profile (client-side):", createError.message)
           logger.error("Error details:", createError)
-          // Do NOT fallback or continue - this is a critical error
-          throw createError
+          
+          // FALLBACK: Try server-side profile creation
+          logger.log("🔄 Attempting server-side profile creation fallback...")
+          try {
+            const serverResponse = await fetch('/api/auth/create-profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newProfile)
+            })
+            
+            if (!serverResponse.ok) {
+              const errorData = await serverResponse.json()
+              logger.error("❌ Server-side profile creation failed:", errorData)
+              throw new Error(errorData.error || "Server profile creation failed")
+            }
+            
+            const { profile: serverProfile } = await serverResponse.json()
+            logger.log("✅ Profile created via server fallback:", serverProfile)
+            
+            // Return normalized server-created profile
+            return {
+              id: serverProfile.id,
+              name: serverProfile.name || user.email?.split('@')[0] || 'User',
+              email: serverProfile.email || user.email || null,
+              phone: serverProfile.phone || null,
+              address: serverProfile.address || null,
+              role: serverProfile.role || 'buyer',
+              updated_at: serverProfile.updated_at
+            }
+          } catch (serverError: any) {
+            logger.error("❌ Server fallback also failed:", serverError.message)
+            throw createError // Throw original client error
+          }
         }
 
         logger.log("✅ Profile created successfully:", createdProfile)

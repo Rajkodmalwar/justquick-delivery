@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/components/buyer/cart-context"
+import { useAuth } from "@/components/auth/auth-provider"
+import { supabase } from "@/lib/supabase/client"
 import { logger } from "@/lib/logger"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +14,7 @@ import { User, Phone, MapPin, Mail, ArrowLeft, CheckCircle, Loader2 } from "luci
 export default function ProfilePage() {
   const router = useRouter()
   const { buyer, isAuthenticated, setBuyer, isLoading, refreshUser } = useCart()
+  const { user: authUser } = useAuth() // Get user from auth context for fallback
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [address, setAddress] = useState("")
@@ -51,13 +54,6 @@ export default function ProfilePage() {
       return
     }
 
-    // CRITICAL: Ensure buyer ID exists before attempting save
-    if (!buyer?.id) {
-      setError("User ID not found. Please log out and log back in.")
-      logger.error("❌ Profile: Missing buyer.id - cannot save")
-      return
-    }
-
     // Start loading
     setSaving(true)
     setError("")
@@ -73,20 +69,71 @@ export default function ProfilePage() {
         setTimeout(() => reject(new Error("Profile save took too long. Please try again.")), timeoutMs)
       )
 
-      // STEP 1: Update buyer profile in Supabase
-      logger.log("📝 Profile: Calling setBuyer() to update Supabase...")
+      // STEP 0: Get user ID from multiple sources (priority order)
+      logger.log("🔍 Profile: Determining user ID from multiple sources...")
       
-      // Validate we have required data
-      if (!buyer?.id) {
+      let userId: string | null = null
+      let userEmail: string | null = null
+      
+      // Source 1: Auth context (most reliable)
+      if (authUser?.id) {
+        userId = authUser.id
+        userEmail = authUser.email || null
+        logger.log("✅ Profile: Got user ID from auth context:", userId)
+      }
+      // Source 2: Buyer context (cart context)
+      else if (buyer?.id) {
+        userId = buyer.id
+        userEmail = buyer.email || null
+        logger.log("✅ Profile: Got user ID from buyer context:", userId)
+      }
+      // Source 3: Session fallback
+      else {
+        logger.log("⏳ Profile: Fetching user ID from session...")
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user?.id) {
+          userId = session.user.id
+          userEmail = session.user.email || null
+          logger.log("✅ Profile: Got user ID from session:", userId)
+        }
+      }
+      
+      if (!userId) {
         throw new Error("User ID not found. Please log out and log back in.")
       }
+      
+      logger.log("✅ Profile: Final user ID:", userId, "Email:", userEmail)
 
+      // STEP 1: Ensure profile exists (call server to create if needed)
+      logger.log("📝 Profile: Ensuring profile exists in database...")
+      try {
+        await Promise.race([
+          fetch('/api/auth/create-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: name.trim() || "User",
+              phone: phone.trim(),
+              address: address.trim()
+            })
+          }),
+          startTimeout()
+        ])
+        logger.log("✅ Profile: Profile creation/update check complete")
+      } catch (profileErr: any) {
+        logger.warn("⚠️ Profile: Profile creation check failed (non-critical)", profileErr.message)
+        // Continue anyway - setBuyer will handle it
+      }
+
+      // STEP 2: Update buyer profile in Supabase
+      logger.log("📝 Profile: Calling setBuyer() to update Supabase...")
+      
       try {
         await Promise.race([
           setBuyer({
-            id: buyer.id, // CRITICAL: Use buyer ID from cart context
+            id: userId, // Use the ID we determined from multiple sources
             name: name.trim() || "User",
-            email: buyer.email || "",
+            email: userEmail || buyer?.email || "",
             phone: phone.trim(),
             address: address.trim()
           }),
@@ -98,7 +145,7 @@ export default function ProfilePage() {
         throw stepErr
       }
 
-      // STEP 2: Refresh buyer data (separate timeout for this step)
+      // STEP 3: Refresh buyer data (separate timeout for this step)
       logger.log("🔄 Profile: Calling refreshUser() to sync database data...")
       try {
         await Promise.race([
@@ -111,7 +158,7 @@ export default function ProfilePage() {
         // Don't fail the whole operation if refresh times out
       }
 
-      // STEP 3: Show success and redirect
+      // STEP 4: Show success and redirect
       logger.log("✅ Profile: Showing success message...")
       setSuccess(true)
       
