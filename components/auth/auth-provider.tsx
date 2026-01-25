@@ -76,10 +76,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .single()
 
-      // Profile exists - return it
+      // Profile exists - normalize it for defensive handling of old/new schema
       if (data) {
-        logger.log("✅ Profile found:", data)
-        return data
+        // DEFENSIVE: Handle both old column (full_name) and new column (name)
+        const normalizedProfile: UserProfile = {
+          id: data.id,
+          name: data.name || data.full_name || user.email?.split('@')[0] || 'User',
+          email: data.email || user.email || null,
+          phone: data.phone || null,
+          address: data.address || null,
+          role: data.role || 'buyer',
+          updated_at: data.updated_at
+        }
+        logger.log("✅ Profile found and normalized:", normalizedProfile)
+        return normalizedProfile
       }
 
       // Check if error is "no rows found" (PGRST116) or permission denied (403)
@@ -88,12 +98,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logger.log("📝 No profile found - creating new profile for user:", userId)
         
         // Step 2: Create profile with initial values
+        // IMPORTANT: Column names must match database schema (name, not full_name)
         const newProfile = {
           id: userId,
           role: "buyer",
-          full_name: user.user_metadata?.full_name ?? "",
+          name: user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? "User",
           phone: user.user_metadata?.phone ?? "",
-          created_at: new Date().toISOString()
+          address: user.user_metadata?.address ?? "",
+          updated_at: new Date().toISOString()
         }
 
         logger.log("🔨 Inserting profile:", newProfile)
@@ -124,8 +136,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw refetchError
         }
 
-        logger.log("✅ Profile re-fetched after creation:", refetchedProfile)
-        return refetchedProfile
+        // Normalize the refetched profile
+        const normalizedRefetched: UserProfile = {
+          id: refetchedProfile.id,
+          name: refetchedProfile.name || refetchedProfile.full_name || user.email?.split('@')[0] || 'User',
+          email: refetchedProfile.email || user.email || null,
+          phone: refetchedProfile.phone || null,
+          address: refetchedProfile.address || null,
+          role: refetchedProfile.role || 'buyer',
+          updated_at: refetchedProfile.updated_at
+        }
+        logger.log("✅ Profile re-fetched and normalized after creation:", normalizedRefetched)
+        return normalizedRefetched
       } else if (error) {
         // Some other Supabase error occurred
         logger.error("❌ Error fetching profile:", error.message)

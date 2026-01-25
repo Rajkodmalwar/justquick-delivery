@@ -15,56 +15,65 @@ export const dynamic = 'force-dynamic'
  * Usage: POST /api/debug/profile-test
  */
 export async function POST(req: Request) {
-  const cookieStore = await cookies()
-
-  // Create Supabase server client with proper cookie handling
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {}
-        },
-      },
-    }
-  )
-
   try {
+    const cookieStore = await cookies()
+
+    // Create Supabase server client with proper cookie handling
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch {}
+          },
+        },
+      }
+    )
+
+    const steps: Array<{ step: string; status: string; message?: string; error?: string; data?: any }> = []
+
     // Step 1: Check authentication
+    steps.push({ step: "auth_init", status: "started", message: "Initializing Supabase client..." })
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError) {
-      return NextResponse.json(
-        {
-          status: "error",
-          step: "authentication",
-          message: "Failed to get user",
-          error: authError.message,
-        },
-        { status: 401 }
-      )
+      steps.push({ 
+        step: "auth_check", 
+        status: "error", 
+        message: "Failed to get user",
+        error: authError.message 
+      })
+      return NextResponse.json({ steps }, { status: 401 })
     }
 
     if (!user) {
-      return NextResponse.json(
-        {
-          status: "error",
-          step: "authentication",
-          message: "No authenticated user found",
-        },
-        { status: 401 }
-      )
+      steps.push({ 
+        step: "auth_check", 
+        status: "error", 
+        message: "No authenticated user found"
+      })
+      return NextResponse.json({ steps }, { status: 401 })
     }
 
+    steps.push({ 
+      step: "auth_check", 
+      status: "success", 
+      message: `Authenticated as ${user.email}`,
+      data: { user_id: user.id, email: user.email }
+    })
+
     // Step 2: Try to read existing profile
+    steps.push({ step: "profile_read", status: "started", message: "Reading existing profile..." })
+    
     const { data: profile, error: readError } = await supabase
       .from("profiles")
       .select("*")
@@ -73,19 +82,34 @@ export async function POST(req: Request) {
 
     if (readError && readError.code !== "PGRST116") {
       // PGRST116 means no rows found, which is OK
-      return NextResponse.json(
-        {
-          status: "error",
-          step: "read_profile",
-          message: "Failed to read profile",
-          error: readError.message,
-          code: readError.code,
-        },
-        { status: 500 }
-      )
+      steps.push({ 
+        step: "profile_read", 
+        status: "error", 
+        message: "Failed to read profile",
+        error: readError.message,
+        data: { code: readError.code }
+      })
+      return NextResponse.json({ steps }, { status: 500 })
+    }
+
+    if (readError && readError.code === "PGRST116") {
+      steps.push({ 
+        step: "profile_read", 
+        status: "info", 
+        message: "No existing profile found (this is OK)"
+      })
+    } else if (profile) {
+      steps.push({ 
+        step: "profile_read", 
+        status: "success", 
+        message: "Existing profile found",
+        data: profile
+      })
     }
 
     // Step 3: Try to upsert a test profile
+    steps.push({ step: "profile_upsert", status: "started", message: "Upserting test profile..." })
+    
     const testData = {
       id: user.id,
       name: "Test Name",
@@ -94,28 +118,34 @@ export async function POST(req: Request) {
       updated_at: new Date().toISOString(),
     }
 
-    const { error: upsertError, status, statusText } = await supabase
+    const { error: upsertError } = await supabase
       .from("profiles")
       .upsert(testData, { onConflict: "id" })
 
     if (upsertError) {
-      return NextResponse.json(
-        {
-          status: "error",
-          step: "upsert_profile",
-          message: "Failed to upsert profile",
-          error: upsertError.message,
+      steps.push({ 
+        step: "profile_upsert", 
+        status: "error", 
+        message: "Failed to upsert profile",
+        error: upsertError.message,
+        data: { 
           code: upsertError.code,
           details: upsertError.details,
-          hint: upsertError.hint,
-          httpStatus: status,
-          httpStatusText: statusText,
-        },
-        { status: 500 }
-      )
+          hint: upsertError.hint
+        }
+      })
+      return NextResponse.json({ steps }, { status: 500 })
     }
 
+    steps.push({ 
+      step: "profile_upsert", 
+      status: "success", 
+      message: "Profile upserted successfully"
+    })
+
     // Step 4: Verify the update worked
+    steps.push({ step: "profile_verify", status: "started", message: "Verifying profile after update..." })
+    
     const { data: updatedProfile, error: verifyError } = await supabase
       .from("profiles")
       .select("*")
@@ -123,36 +153,42 @@ export async function POST(req: Request) {
       .single()
 
     if (verifyError) {
-      return NextResponse.json(
-        {
-          status: "error",
-          step: "verify_profile",
-          message: "Failed to verify profile after update",
-          error: verifyError.message,
-        },
-        { status: 500 }
-      )
+      steps.push({ 
+        step: "profile_verify", 
+        status: "error", 
+        message: "Failed to verify profile after update",
+        error: verifyError.message
+      })
+      return NextResponse.json({ steps }, { status: 500 })
     }
 
-    return NextResponse.json(
-      {
-        status: "success",
-        message: "Profile test completed successfully",
-        user: {
-          id: user.id,
-          email: user.email,
-        },
-        previousProfile: profile,
-        updatedProfile: updatedProfile,
+    steps.push({ 
+      step: "profile_verify", 
+      status: "success", 
+      message: "Profile verified successfully",
+      data: updatedProfile
+    })
+
+    // All steps passed
+    return NextResponse.json({
+      status: "success",
+      message: "All tests passed!",
+      steps,
+      user: {
+        id: user.id,
+        email: user.email,
       },
-      { status: 200 }
-    )
+      finalProfile: updatedProfile
+    }, { status: 200 })
+
   } catch (error: any) {
+    console.error("DEBUG ENDPOINT ERROR:", error)
     return NextResponse.json(
       {
         status: "error",
-        message: "Unexpected error",
-        error: error.message,
+        message: "Unexpected error in debug endpoint",
+        error: error?.message || String(error),
+        stack: error?.stack
       },
       { status: 500 }
     )

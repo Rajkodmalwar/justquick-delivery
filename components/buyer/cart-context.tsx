@@ -159,6 +159,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
    * Does NOT reload cart from localStorage.
    */
   useEffect(() => {
+    // DETAILED DEBUGGING: Help diagnose buyer.id issues
+    logger.log("🔍 Cart: Buyer sync triggered", {
+      user_exists: !!user,
+      user_id: user?.id,
+      profile_exists: !!profile,
+      profile_id: profile?.id,
+      authIsAdmin: authIsAdmin
+    })
+    
     if (user && profile) {
       // User is authenticated
       const buyerData: Buyer = {
@@ -169,20 +178,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
         address: profile.address || user.user_metadata?.address || '',
         role: profile.role
       }
-      logger.log("✅ Cart: Buyer synced from auth", buyerData.email)
+      logger.log("✅ Cart: Buyer synced from auth", {
+        id: buyerData.id,
+        email: buyerData.email,
+        phone: buyerData.phone,
+        hasProfile: !!profile
+      })
       setBuyer(buyerData)
       localStorage.setItem("jq_buyer", JSON.stringify(buyerData))
       
       // Track admin status separately
       setIsAdminUser(authIsAdmin)
+    } else if (user && !profile) {
+      // User exists but profile is missing - this is the issue!
+      logger.error("❌ Cart: User exists but NO PROFILE found", {
+        user_id: user.id,
+        user_email: user.email,
+        profile: profile
+      })
+      setBuyer(null)
+      localStorage.removeItem("jq_buyer")
+      setIsAdminUser(false)
     } else {
       // User is not authenticated
-      logger.log("ℹ️ Cart: No authenticated user")
+      logger.log("ℹ️ Cart: No authenticated user", { user, profile })
       setBuyer(null)
       localStorage.removeItem("jq_buyer")
       setIsAdminUser(false)
     }
-  }, [user, authIsAdmin]) // Only depends on auth changes, NOT authLoading
+  }, [user, profile, authIsAdmin]) // Added profile to dependency for better debugging
 
   /**
    * ADMIN CART GUARD: Clear cart if user is admin
