@@ -412,79 +412,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       logger.log("📝 Cart: Starting profile update...", { buyerData })
 
-      // CRITICAL: Get authenticated user's session with retry logic
-      logger.log("📝 Cart: Fetching session...")
-      let session = null
-      let attempts = 0
-      const maxAttempts = 3
-
-      // Retry session fetch up to 3 times (session might not be loaded yet in production)
-      while (!session && attempts < maxAttempts) {
-        attempts++
-        logger.log(`📝 Cart: Session fetch attempt ${attempts}/${maxAttempts}...`)
-        
-        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
-        
-        if (sessionError) {
-          logger.error(`❌ Cart: Session fetch error (attempt ${attempts})`, sessionError.message)
-          if (attempts === maxAttempts) {
-            throw new Error(`Session error after ${maxAttempts} attempts: ${sessionError.message}`)
-          }
-          // Wait 500ms before retrying
-          await new Promise(resolve => setTimeout(resolve, 500))
-          continue
-        }
-
-        if (currentSession?.user?.id) {
-          session = currentSession
-          logger.log(`✅ Cart: Session retrieved on attempt ${attempts}`)
-          break
-        } else if (attempts < maxAttempts) {
-          logger.warn(`⚠️ Cart: No session on attempt ${attempts}, retrying...`)
-          // Wait 500ms before retrying
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
-      }
-
-      const sessionFetchTime = Date.now() - startTime
-      logger.log(`⏱️ Cart: Session fetch took ${sessionFetchTime}ms after ${attempts} attempt(s)`)
-
-      if (!session?.user?.id) {
-        logger.error("❌ Cart: No authenticated user after all attempts")
+      // Get authenticated user from current state (should already be set)
+      // Use user from auth context instead of fetching session again
+      if (!user?.id) {
+        logger.error("❌ Cart: User not authenticated")
         throw new Error("Not authenticated. Please log in again.")
       }
 
-      const userId = session.user.id
-      logger.log(`✅ Cart: Got authenticated user ID: ${userId}`)
-      logger.log(`✅ Cart: Got authenticated user ID: ${userId}`)
+      const userId = user.id
+      logger.log(`✅ Cart: Using authenticated user ID: ${userId}`)
 
-      // Step 1: Update auth user metadata (optional, may fail silently)
-      logger.log("📝 Cart: Updating auth metadata...")
-      const metadataStartTime = Date.now()
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: {
-          name: buyerData.name,
-          phone: buyerData.phone,
-          address: buyerData.address
-        }
-      })
-      const metadataTime = Date.now() - metadataStartTime
-      logger.log(`⏱️ Cart: Metadata update took ${metadataTime}ms`)
+      // SKIP auth metadata update - it's slow and not critical
+      // Just update the profiles table directly
 
-      if (metadataError) {
-        logger.warn("⚠️ Cart: Auth metadata update failed (non-critical)", metadataError.message)
-        // Don't throw - metadata is secondary to database profile
-      } else {
-        logger.log("✅ Cart: Auth metadata updated")
-      }
-
-      // Step 2: Update profiles table (PRIMARY - must succeed)
-      // NOTE: Email is NOT stored in profiles - it's in auth.users table
+      // Update profiles table (PRIMARY - must succeed)
       logger.log(`📝 Cart: Upserting profile for user ${userId}...`)
       const updateStartTime = Date.now()
       
       // Use UPSERT to create profile if it doesn't exist, or update if it does
-      const { error: profileError, status, statusText } = await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
         .upsert(
           {
@@ -493,60 +439,47 @@ export function CartProvider({ children }: { children: ReactNode }) {
             phone: buyerData.phone,
             address: buyerData.address,
             updated_at: new Date().toISOString()
-            // role will default to 'buyer' if this is a new row (from DB default)
           },
           {
-            onConflict: 'id' // If profile already exists, update it
+            onConflict: 'id'
           }
         )
 
       const updateTime = Date.now() - updateStartTime
-      logger.log(`⏱️ Cart: DB upsert took ${updateTime}ms`, { status, statusText })
+      logger.log(`⏱️ Cart: DB upsert took ${updateTime}ms`)
 
       if (profileError) {
-        logger.error("❌ Cart: Profile update failed - RLS or DB issue", {
+        logger.error("❌ Cart: Profile update failed", {
           code: profileError.code,
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint,
-          status,
-          statusText
+          message: profileError.message
         })
         
-        // Provide clear error message
-        if (profileError.code === 'PGRST116') {
-          throw new Error("No profile found. Try logging out and back in.")
-        } else if (profileError.code === '42P01') {
-          throw new Error("Profile table missing columns. Contact admin.")
-        } else if (profileError.code === '42501') {
-          throw new Error("Permission denied. You don't have access to update your profile. Try logging out and back in.")
+        // Provide clear error message based on error code
+        if (profileError.code === '42501') {
+          throw new Error("Permission denied updating profile. Try logging out and back in.")
         } else {
           throw new Error(`Failed to update profile: ${profileError.message}`)
         }
       }
 
-      logger.log("✅ Cart: Profile updated in database successfully")
+      logger.log("✅ Cart: Profile updated in database")
 
-      // Step 3: Update local React state
-      logger.log("📝 Cart: Updating local state...")
+      // Update local state
       setBuyer(buyerData)
       
-      // Step 4: Cache in localStorage for offline support
-      logger.log("📝 Cart: Caching in localStorage...")
+      // Cache in localStorage
       localStorage.setItem("jq_buyer", JSON.stringify(buyerData))
       
       const totalTime = Date.now() - startTime
-      logger.log(`✅ Cart: Profile update complete in ${totalTime}ms - all data synced`)
+      logger.log(`✅ Cart: Profile update complete in ${totalTime}ms`)
     } catch (error: any) {
       logger.error("❌ Cart: Profile update failed", {
         message: error.message,
-        error: error,
         duration: Date.now() - startTime
       })
-      // Re-throw so profile page can show error
       throw error
     }
-  }, [])
+  }, [user])
 
   /**
    * REFRESH USER: Reload profile from Supabase database

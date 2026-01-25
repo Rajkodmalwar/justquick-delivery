@@ -67,8 +67,8 @@ export default function ProfilePage() {
       const startTime = Date.now()
       logger.log("📝 Profile: Starting save operation...")
 
-      // Add timeout to prevent infinite hanging (30 seconds per step)
-      const timeoutMs = 30000
+      // Add timeout to prevent infinite hanging (10 seconds per step)
+      const timeoutMs = 10000
       const startTimeout = () => new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error("Profile save took too long. Please try again.")), timeoutMs)
       )
