@@ -127,6 +127,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems([])
       }
       
+      // CRITICAL FIX: Also load buyer from localStorage on init
+      // This ensures buyer.id is available even if profile hasn't loaded yet
+      const savedBuyer = localStorage.getItem("jq_buyer")
+      if (savedBuyer) {
+        try {
+          const parsed = JSON.parse(savedBuyer)
+          if (parsed?.id) {
+            setBuyer(parsed)
+            logger.log("📦 Cart: Loaded buyer from localStorage on init", {
+              id: parsed.id,
+              email: parsed.email
+            })
+          }
+        } catch (error) {
+          logger.error("❌ Cart: Failed to parse localStorage buyer", error)
+        }
+      }
+      
       // Mark hydration complete - now safe to render localStorage data
       setIsHydrated(true)
       logger.log("✅ Cart: Hydration complete, client ready")
@@ -157,6 +175,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
    * This syncs authenticated user info to buyer state.
    * SEPARATE from cart initialization - only runs when user changes.
    * Does NOT reload cart from localStorage.
+   * 
+   * CRITICAL FIX: If profile is still loading (null but user exists),
+   * fall back to localStorage buyer data instead of clearing it
    */
   useEffect(() => {
     // DETAILED DEBUGGING: Help diagnose buyer.id issues
@@ -169,7 +190,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     })
     
     if (user && profile) {
-      // User is authenticated
+      // User is authenticated with profile loaded
       const buyerData: Buyer = {
         id: user.id,
         name: profile.name || user.email?.split('@')[0] || 'User',
@@ -190,15 +211,46 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Track admin status separately
       setIsAdminUser(authIsAdmin)
     } else if (user && !profile) {
-      // User exists but profile is missing - this is the issue!
-      logger.error("❌ Cart: User exists but NO PROFILE found", {
+      // User exists but profile is still loading
+      // CRITICAL: Check localStorage fallback instead of clearing buyer
+      logger.warn("⏳ Cart: User exists but profile still loading", {
         user_id: user.id,
-        user_email: user.email,
-        profile: profile
+        user_email: user.email
       })
-      setBuyer(null)
-      localStorage.removeItem("jq_buyer")
-      setIsAdminUser(false)
+      
+      // Try to restore from localStorage
+      const savedBuyer = localStorage.getItem("jq_buyer")
+      if (savedBuyer) {
+        try {
+          const parsed = JSON.parse(savedBuyer)
+          if (parsed?.id === user.id) {
+            // Same user - restore from localStorage
+            logger.log("📦 Cart: Restored buyer from localStorage during profile load", {
+              id: parsed.id,
+              email: parsed.email
+            })
+            setBuyer(parsed)
+            setIsAdminUser(authIsAdmin)
+          } else {
+            // Different user - clear buyer
+            logger.log("❌ Cart: Different user, clearing buyer")
+            setBuyer(null)
+            localStorage.removeItem("jq_buyer")
+            setIsAdminUser(false)
+          }
+        } catch (err) {
+          logger.error("❌ Cart: Failed to parse localStorage buyer", err)
+          setBuyer(null)
+          localStorage.removeItem("jq_buyer")
+          setIsAdminUser(false)
+        }
+      } else {
+        // No localStorage fallback - wait for profile or clear if it's been too long
+        logger.warn("⚠️ Cart: No localStorage fallback and profile missing")
+        setBuyer(null)
+        localStorage.removeItem("jq_buyer")
+        setIsAdminUser(false)
+      }
     } else {
       // User is not authenticated
       logger.log("ℹ️ Cart: No authenticated user", { user, profile })
