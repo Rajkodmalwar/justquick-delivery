@@ -60,44 +60,55 @@ export default function ProfilePage() {
       const startTime = Date.now()
       logger.log("📝 Profile: Starting save operation...")
 
-      // Add timeout to prevent infinite hanging (30 seconds)
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Profile save took too long. Please try again.")), 30000)
+      // Add timeout to prevent infinite hanging (15 seconds total)
+      const timeoutMs = 15000
+      const startTimeout = () => new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error("Profile save took too long. Please try again.")), timeoutMs)
       )
 
       // STEP 1: Update buyer profile in Supabase
       logger.log("📝 Profile: Calling setBuyer() to update Supabase...")
-      await Promise.race([
-        setBuyer({
-          id: buyer?.id || "",
-          name: name.trim() || "User",
-          email: buyer?.email || "",
-          phone: phone.trim(),
-          address: address.trim()
-        }),
-        timeoutPromise
-      ])
-      
-      logger.log("✅ Profile: Profile saved to Supabase successfully")
+      try {
+        await Promise.race([
+          setBuyer({
+            id: buyer?.id || "",
+            name: name.trim() || "User",
+            email: buyer?.email || "",
+            phone: phone.trim(),
+            address: address.trim()
+          }),
+          startTimeout()
+        ])
+        logger.log("✅ Profile: Profile saved to Supabase successfully")
+      } catch (stepErr: any) {
+        logger.error("❌ Profile: setBuyer failed", stepErr.message)
+        throw stepErr
+      }
 
-      // STEP 2: Refresh buyer data to ensure local state matches database
+      // STEP 2: Refresh buyer data (separate timeout for this step)
       logger.log("🔄 Profile: Calling refreshUser() to sync database data...")
-      await Promise.race([
-        refreshUser(),
-        timeoutPromise
-      ])
-      
-      logger.log("✅ Profile: Buyer state refreshed from database")
+      try {
+        await Promise.race([
+          refreshUser(),
+          startTimeout()
+        ])
+        logger.log("✅ Profile: Buyer state refreshed from database")
+      } catch (stepErr: any) {
+        logger.error("⚠️ Profile: refreshUser had timeout/error (non-critical)", stepErr.message)
+        // Don't fail the whole operation if refresh times out
+      }
 
       // STEP 3: Show success and redirect
       logger.log("✅ Profile: Showing success message...")
       setSuccess(true)
       
-      // Give React time to update the component tree and show success
+      // Give user 1 second to see success message
       await new Promise(resolve => setTimeout(resolve, 1000))
       
       const totalTime = Date.now() - startTime
-      logger.log("🔙 Profile: Navigating back to checkout...")
+      logger.log(`🔙 Profile: Redirecting back (took ${totalTime}ms total)...`)
+      
+      // Use router.back() to return to previous page
       router.back()
 
     } catch (err: any) {
