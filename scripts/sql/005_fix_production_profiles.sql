@@ -20,6 +20,7 @@ WHERE full_name IS NOT NULL AND (name IS NULL OR name = '');
 -- Step 3: Verify the migration
 SELECT 
   id, 
+  email,
   name, 
   full_name, 
   phone, 
@@ -44,4 +45,8 @@ LIMIT 10;
 --
 -- If you see NULL in name column after running this,
 -- it means those profiles had NULL in full_name too.
--- Check your data and update manually if needed.
+-- In that case, populate from email prefix:
+
+UPDATE public.profiles
+SET name = SUBSTRING(email FROM 1 FOR POSITION('@' IN email) - 1)
+WHERE name IS NULL AND email IS NOT NULL;
