@@ -98,14 +98,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logger.log("📝 No profile found - creating new profile for user:", userId)
         
         // Step 2: Create profile with initial values
-        // IMPORTANT: Column names must match database schema (name, not full_name)
+        // IMPORTANT: Column names must match database schema (name, NOT full_name)
         const newProfile = {
           id: userId,
           role: "buyer",
-          name: user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? "User",
+          name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email?.split('@')[0] ?? "User",
+          email: user.email ?? "",
           phone: user.user_metadata?.phone ?? "",
           address: user.user_metadata?.address ?? "",
-          updated_at: new Date().toISOString()
+          created_at: new Date().toISOString()
         }
 
         logger.log("🔨 Inserting profile:", newProfile)

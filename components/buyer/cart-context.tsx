@@ -127,9 +127,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems([])
       }
       
-      // Mark hydration complete - now safe to render localStorage data
-      setIsHydrated(true)
-      logger.log("✅ Cart: Hydration complete, client ready")
+      // PRODUCTION FIX: Also load buyer from localStorage for production fallback
+      // This helps when profile hasn't loaded yet in Supabase
+      const savedBuyer = localStorage.getItem("jq_buyer")
+      if (savedBuyer) {
+        try {
+          const parsed = JSON.parse(savedBuyer)
+          if (parsed?.id) {
+            setBuyer(parsed)
+            logger.log("✅ Cart: Loaded buyer from localStorage as fallback")
+          }
+        } catch (error) {
+          logger.error("❌ Cart: Failed to parse saved buyer", error)
+        }
+      }
     } catch (error) {
       logger.error("❌ Cart: Initialization error", error)
       setIsHydrated(true) // Mark hydrated even on error
@@ -152,61 +163,46 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, isAdminUser, isHydrated]) // Only depends on actual cart data
 
   /**
-   * BUYER SYNC: Update buyer profile when user changes
+   * BUYER SYNC: Update buyer profile when user or profile changes
    * 
    * This syncs authenticated user info to buyer state.
    * SEPARATE from cart initialization - only runs when user changes.
    * Does NOT reload cart from localStorage.
+   * 
+   * CRITICAL FIX: In production, the profile comes from Supabase and updates
+   * after initial user load. Must include profile in dependencies to catch updates.
    */
   useEffect(() => {
-    // DETAILED DEBUGGING: Help diagnose buyer.id issues
-    logger.log("🔍 Cart: Buyer sync triggered", {
-      user_exists: !!user,
-      user_id: user?.id,
-      profile_exists: !!profile,
-      profile_id: profile?.id,
-      authIsAdmin: authIsAdmin
-    })
+    logger.log("🔄 Cart: Buyer sync triggered", { userId: user?.id, hasProfile: !!profile })
     
     if (user && profile) {
-      // User is authenticated
+      // User is authenticated with profile loaded
+      // Profile should have name field from database
       const buyerData: Buyer = {
         id: user.id,
-        name: profile.name || user.email?.split('@')[0] || 'User',
-        email: user.email || '',
+        name: profile.name || profile.full_name || user.email?.split('@')[0] || 'User',
+        email: profile.email || user.email || '',
         phone: profile.phone || user.user_metadata?.phone || '',
         address: profile.address || user.user_metadata?.address || '',
         role: profile.role
       }
-      logger.log("✅ Cart: Buyer synced from auth", {
-        id: buyerData.id,
-        email: buyerData.email,
-        phone: buyerData.phone,
-        hasProfile: !!profile
-      })
+      logger.log("✅ Cart: Buyer synced from auth", buyerData)
       setBuyer(buyerData)
       localStorage.setItem("jq_buyer", JSON.stringify(buyerData))
       
       // Track admin status separately
       setIsAdminUser(authIsAdmin)
     } else if (user && !profile) {
-      // User exists but profile is missing - this is the issue!
-      logger.error("❌ Cart: User exists but NO PROFILE found", {
-        user_id: user.id,
-        user_email: user.email,
-        profile: profile
-      })
-      setBuyer(null)
-      localStorage.removeItem("jq_buyer")
-      setIsAdminUser(false)
+      // User authenticated but profile not yet loaded - don't clear buyer yet
+      logger.log("⏳ Cart: User ready but profile still loading...")
     } else {
       // User is not authenticated
-      logger.log("ℹ️ Cart: No authenticated user", { user, profile })
+      logger.log("ℹ️ Cart: No authenticated user")
       setBuyer(null)
       localStorage.removeItem("jq_buyer")
       setIsAdminUser(false)
     }
-  }, [user, profile, authIsAdmin]) // Added profile to dependency for better debugging
+  }, [user, profile, authIsAdmin]) // Include profile to catch updates from Supabase
 
   /**
    * ADMIN CART GUARD: Clear cart if user is admin
@@ -422,6 +418,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           {
             id: userId, // CRITICAL: Use authenticated user ID as primary key
             name: buyerData.name,
+            email: buyerData.email, // Store email in profile for quick access
             phone: buyerData.phone,
             address: buyerData.address,
             updated_at: new Date().toISOString()
